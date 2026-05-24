@@ -14,7 +14,7 @@ qm create ${TEMPLATE_VMID} \
   --memory 1024 \
   --net0 virtio,bridge=vmbr0 \
   --scsihw virtio-scsi-single \
-  --disk ${STORAGE}:vm-${TEMPLATE_VMID}-disk-0,size=10G \
+  --scsi0 ${STORAGE}:10 \
   --cdrom local:iso/${ISO_NAME} \
   --boot order=scsi0 \
   --agent enabled=1
