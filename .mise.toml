@@ -1,0 +1,5 @@
+[tools]
+tofu = "1.9"
+talosctl = "1.10"
+talhelper = "latest"
+"python:ansible" = "latest"
