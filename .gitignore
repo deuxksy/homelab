@@ -7,5 +7,11 @@ proxmox/opentofu/.terraform.lock.hcl
 # Sops
 secrets.sops.yaml.dec
 
+# OMC
+.omc/
+
+# Remember
+.remember/
+
 # OS
 .DS_Store
