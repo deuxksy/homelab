@@ -1,0 +1,24 @@
+clusterName: homelab
+talosVersion: v1.10
+kubernetesVersion: v1.32.5
+endpoint: https://<TOFU_OUTPUT_MASTER_IP>:6443
+
+nodes:
+  - hostname: talos-master
+    ipAddress: <TOFU_OUTPUT_MASTER_IP>
+    controlPlane: true
+    installDiskSelector:
+      size: "<= 20GB"
+    machineSpec:
+      mode: metal
+  - hostname: talos-worker
+    ipAddress: <TOFU_OUTPUT_WORKER_IP>
+    controlPlane: false
+    installDiskSelector:
+      size: "<= 30GB"
+    machineSpec:
+      mode: metal
+
+worker:
+  nodeLabels:
+    node-role.kubernetes.io/worker: ""

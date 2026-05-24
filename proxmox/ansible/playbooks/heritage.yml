@@ -1,0 +1,78 @@
+---
+- name: Deploy heritage media server
+  hosts: heritage
+  gather_facts: true
+  vars:
+    heritage_repo: /opt/heritage
+
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - curl
+          - git
+          - ca-certificates
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: |
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+      changed_when: true
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/debian
+          {{ ansible_distribution_release }} stable
+        state: present
+        update_cache: true
+
+    - name: Install Docker
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+
+    - name: Clone heritage repo
+      ansible.builtin.git:
+        repo: git@github.com:deuxksy/heritage.git
+        dest: "{{ heritage_repo }}"
+        version: main
+        accept_hostkey: true
+
+    - name: Decrypt .env.sops
+      ansible.builtin.shell:
+        cmd: sops -d .env.sops > .env
+        chdir: "{{ heritage_repo }}"
+      changed_when: true
+
+    - name: Start heritage services
+      community.docker.docker_compose_v2:
+        project_src: "{{ heritage_repo }}"
+        state: present
+      environment:
+        DOCKER_HOST: unix:///run/docker.sock
+
+    - name: Wait for services
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Verify Jellyfin is responding
+      ansible.builtin.uri:
+        url: "http://localhost:8096/health"
+        status_code: 200
+        timeout: 10
+      register: health
+      until: health.status == 200
+      retries: 5
+      delay: 10
