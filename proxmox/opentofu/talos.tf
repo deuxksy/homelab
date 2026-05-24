@@ -3,7 +3,7 @@ resource "proxmox_virtual_environment_vm" "talos_master" {
   vm_id       = var.talos_master_vmid
   node_name   = var.proxmox_node
   description = "Talos Linux K8s control-plane"
-  started     = true
+  started     = false
 
   clone {
     vm_id = var.talos_template_vmid
@@ -36,7 +36,7 @@ resource "proxmox_virtual_environment_vm" "talos_worker" {
   vm_id       = var.talos_worker_vmid
   node_name   = var.proxmox_node
   description = "Talos Linux K8s worker"
-  started     = true
+  started     = false
 
   clone {
     vm_id = var.talos_template_vmid

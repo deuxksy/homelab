@@ -29,22 +29,12 @@ resource "proxmox_virtual_environment_container" "heritage" {
   }
 
   operating_system {
-    template_file_id = "local:vztmpl/debian-12-standard.tar.zst"
+    template_file_id = "local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst"
     type             = "debian"
   }
 
   features {
     nesting = true
-  }
-
-  mount_point {
-    volume = "/mnt/data1"
-    path   = "/mnt/data1"
-  }
-
-  mount_point {
-    volume = "/mnt/data2"
-    path   = "/mnt/data2"
   }
 
   network_interface {

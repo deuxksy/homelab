@@ -6,7 +6,7 @@ variable "proxmox_node" {
 variable "proxmox_endpoint" {
   type        = string
   description = "Proxmox API endpoint"
-  default     = "https://192.168.221.198:8006"
+  default     = "https://walle.bun-bull.ts.net:8006"
 }
 
 variable "talos_template_vmid" {

@@ -5,6 +5,7 @@ data "sops_file" "secrets" {
 provider "proxmox" {
   endpoint  = var.proxmox_endpoint
   api_token = data.sops_file.secrets.data["proxmox_api_token"]
+  insecure  = true
 
   ssh {
     username = "root"
