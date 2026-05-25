@@ -33,6 +33,15 @@ endpoints:
     conditions:
       - "[CERTIFICATE_EXPIRATION] > 720h"
 
+  # --- Domains ---
+  - name: zzizily.com
+    group: Domains
+    url: "https://zzizily.com"
+    interval: 24h
+    conditions:
+      - "[STATUS] == 200"
+      - "[DOMAIN_EXPIRATION] > 2027-06-01"
+
   # --- Services ---
   - name: Transmission
     group: Services
