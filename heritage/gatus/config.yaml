@@ -53,7 +53,7 @@ endpoints:
   # --- Streaming ---
   - name: Jellyfin
     group: Streaming
-    url: "http://localhost:8096/health"
+    url: "http://localhost:8096/jellyfin/health"
     interval: 1m
     conditions:
       - "[STATUS] == 200"

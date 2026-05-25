@@ -55,8 +55,7 @@ services:
     image: twinproduction/gatus:latest
     container_name: gatus
     restart: unless-stopped
-    ports:
-      - "8088:8088"
+    network_mode: host
     volumes:
       - ./gatus/config.yaml:/config/config.yaml:ro
       - ./gatus/data:/data
