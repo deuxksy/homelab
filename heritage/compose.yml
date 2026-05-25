@@ -35,9 +35,9 @@ services:
     volumes:
       - ./transmission/config:/config
       - ./transmission/data:/data
-      - /mnt/data1/torrent/downloads:/downloads
-      - /mnt/data2/torrent/complete:/downloads/complete
-      - /mnt/data1/torrent/downloads/watch:/watch
+      - /mnt/data2/torrent/downloads:/downloads
+      - /mnt/data1/torrent/complete:/downloads/complete
+      - /mnt/data2/torrent/downloads/watch:/watch
     mem_limit: 512m
 
   # --- Monitoring ---
@@ -80,8 +80,8 @@ services:
     volumes:
       - ./jellyfin/config:/config
       - ./jellyfin/cache:/cache
-      - /mnt/data1/torrent/downloads:/data1
-      - /mnt/data2/torrent/complete:/data2
+      - /mnt/data2/torrent/downloads:/data1
+      - /mnt/data1/torrent/complete:/data2
     mem_limit: 2g
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8096/health"]

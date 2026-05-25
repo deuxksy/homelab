@@ -14,6 +14,7 @@
           - git
           - ca-certificates
           - gnupg
+          - rsync
         state: present
         update_cache: true
 
@@ -46,11 +47,11 @@
     - name: Configure Tailscale Serve
       ansible.builtin.shell:
         cmd: |
-          tailscale serve --bg / http://127.0.0.1:3000
-          tailscale serve --bg /jellyfin http://127.0.0.1:8096
-          tailscale serve --bg /transmission http://127.0.0.1:8091
-          tailscale serve --bg /gatus http://127.0.0.1:8088
-          tailscale serve --bg /beszel http://127.0.0.1:8090
+          tailscale serve --bg --set-path / 3000
+          tailscale serve --bg --set-path /jellyfin 8096
+          tailscale serve --bg --set-path /transmission 8091
+          tailscale serve --bg --set-path /gatus 8088
+          tailscale serve --bg --set-path /beszel 8090
       changed_when: true
 
     # --- Docker ---
