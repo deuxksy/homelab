@@ -39,10 +39,12 @@ ssh root@walle.bun-bull.ts.net "qm set 100 --boot order=ide2; qm set 101 --boot 
 ssh arv "cat /tmp/dhcp.leases" | grep "<MAC>"
 
 # 4. Talos 부트스트랩
-cd k8s && talhelper genconfig
+cd k8s && talhelper gensecret > talsecret.yaml  # 최초 1회
+talhelper genconfig
 talosctl apply-config --nodes <MASTER_IP> --file clusterconfig/homelab-talos-master.yaml --insecure
 talosctl apply-config --nodes <WORKER_IP> --file clusterconfig/homelab-talos-worker.yaml --insecure
-talosctl bootstrap --nodes <MASTER_IP>
+TALOSCONFIG=clusterconfig/talosconfig talosctl --endpoints <MASTER_IP> --nodes <MASTER_IP> bootstrap
+TALOSCONFIG=clusterconfig/talosconfig talosctl --endpoints <MASTER_IP> --nodes <MASTER_IP> kubeconfig ~/.kube/homelab.config --force
 
 # 5. Ansible — heritage 배포
 cd proxmox/ansible && ansible-playbook playbooks/heritage.yml
@@ -85,14 +87,14 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
 | `scripts/` | Proxmox 호스트 실행 스크립트 (템플릿 생성 등) |
 | `docs/` | 문서 (architecture.md, specs, plans) |
-| `.mcp.json` | MCP 서버 설정 — proxmox(k8sgpt는 kubeconfig 생성 후 활성화) |
+| `.mcp.json` | MCP 서버 설정 — proxmox, k8sgpt (kubeconfig: `~/.kube/homelab.config`) |
 | `.sops.yaml` | sops 암호화 규칙 (age 키) |
 
 ## Gotchas
 
 - **Bash CWD:** `cd proxmox/ansible && ...` 실행 후 CWD가 변경됨. 후속 git 명령어는 반드시 절대 경로 또는 `cd /Users/crong/git/homelab &&` 선행 필요
 - **Proxmox HTTP 검증:** `curl -sI`(HEAD)는 501 반환. GET으로 검증: `curl -s -o /dev/null -w "%{http_code}" https://walle.bun-bull.ts.net`
-- **Boot order:** Talos VM 클론 후 `boot order=scsi0`(빈 디스크)로 설정됨. `qm set <ID> --boot order=ide2`로 CDROM 부팅으로 변경해야 Talos ISO가 로드됨. 이후 talosctl apply-config로 설치하면 디스크 부팅으로 전환됨
+- **Boot order:** Talos VM 클론 후 `boot order=scsi0`(빈 디스크)로 설정됨. 최초 부팅만 `qm set <ID> --boot order=ide2`로 CDROM 부팅하여 ISO 로드 → `talosctl apply-config --insecure`로 설치 후 `qm set <ID> --boot order=scsi0`로 디스크 부팅 전환 필요
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini`, `talconfig.yaml` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요
@@ -102,6 +104,9 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 - **Tailscale Serve HTTPS 백엔드:** 자가 서명 인증서 백엔드는 `https+insecure://` 스킴 사용 필요 (일반 `https://`는 502 에러)
 - **Proxmox 초기 설정:** 재설치 후 enterprise repo 비활성화 필요 (`pve-enterprise.sources` → `.disabled`). no-subscription repo는 trixie(PVE 9) 사용: `deb http://download.proxmox.com/debian/pve trixie pve-no-subscription`
 - **LXC 템플릿:** `pveam update && pveam download local <template-name>` — Proxmox에서 LXC용 OS 템플릿 다운로드. `pveam available --section system`으로 목록 확인
+- **Talos 메모리:** master 최소 4GB 권장 (Talos 권장 3946 MiB). 1.5GB에서 scheduler CrashLoopBackOff + CoreDNS Pending 발생
+- **talhelper 버전:** v3.1.10은 Talos v1.10.x만 지원. v1.11+ 필요시 `talosctl gen config` 직접 사용 또는 talhelper 업그레이드 대기
+- **talsecret.yaml:** `talhelper gensecret > talsecret.yaml`로 최초 생성. 분실 시 클러스터 재부트스트랩 필요 (기존 인증서와 불일치)
 
 ## MCP Servers
 
@@ -110,7 +115,7 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 | 서버 | 상태 | 비고 |
 | :--- | :--- | :--- |
 | proxmox | 활성 | `proxmox-mcp-plus` (uv), 설정: `~/.config/proxmox-mcp/config.json` |
-| k8sgpt | 비활성 | `/opt/homebrew/bin/k8sgpt`, KUBECONFIG(`~/.kube/homelab.config`) 생성 필요 |
+| k8sgpt | 활성 | `/opt/homebrew/bin/k8sgpt` v0.4.33, KUBECONFIG: `~/.kube/homelab.config` |
 
 - **Proxmox MCP 설정:** `~/.config/proxmox-mcp/config.json` — host, API token, `verify_ssl=false` + `dev_mode=true` (자가 서명 인증서)
-- **K8sgpt 활성화:** Talos 부트스트랩 후 `talosctl kubeconfig --nodes <MASTER_IP> ~/.kube/homelab.config` 실행
+- **K8sgpt 활성화:** KUBECONFIG `~/.kube/homelab.config` 설정 완료. Talos 재부트스트랩 시: `cd k8s && TALOSCONFIG=clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 kubeconfig ~/.kube/homelab.config --force`

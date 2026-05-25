@@ -38,7 +38,7 @@ variable "talos_master_resources" {
   })
   default = {
     cores  = 2
-    memory = 1536
+    memory = 4096
     disk   = 20
   }
 }

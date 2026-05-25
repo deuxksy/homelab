@@ -18,3 +18,5 @@ secrets.sops.yaml.dec
 
 # OS
 .DS_Store
+talsecret.yaml
+*.sqlite3*
