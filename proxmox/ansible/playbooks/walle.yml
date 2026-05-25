@@ -14,6 +14,6 @@
       ansible.builtin.shell:
         cmd: |
           tailscale serve reset
-          tailscale serve --bg --set-path / https://127.0.0.1:8006
-      when: "'https://127.0.0.1:8006' not in ts_serve_status.stdout"
+          tailscale serve --bg --set-path / https+insecure://127.0.0.1:8006
+      when: "'https+insecure://127.0.0.1:8006' not in ts_serve_status.stdout"
       changed_when: true
