@@ -19,7 +19,7 @@ services:
     network_mode: host
     environment:
       - PUID=1000
-      - PGID=1000
+      - PGID=996
       - TZ=Asia/Ho_Chi_Minh
       - HOMEPAGE_ALLOWED_HOSTS=*
     volumes:
