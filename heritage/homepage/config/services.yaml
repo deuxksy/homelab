@@ -50,7 +50,7 @@
     - Gatus:
         label: "Uptime Monitor"
         icon: gatus.png
-        href: https://heritage.bun-bull.ts.net/gatus
+        href: http://192.168.221.214:8088
         container: gatus
         widget:
           type: gatus

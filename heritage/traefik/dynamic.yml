@@ -1,0 +1,54 @@
+http:
+  routers:
+    transmission:
+      rule: "PathPrefix(`/transmission`)"
+      service: transmission
+      priority: 20
+
+    jellyfin:
+      rule: "PathPrefix(`/jellyfin`)"
+      service: jellyfin
+      priority: 20
+
+    beszel:
+      rule: "PathPrefix(`/beszel`)"
+      service: beszel
+      middlewares:
+        - strip-beszel
+      priority: 20
+
+    homepage:
+      rule: "PathPrefix(`/`)"
+      service: homepage
+      priority: 1
+
+  middlewares:
+    strip-jellyfin:
+      stripPrefix:
+        prefixes:
+          - "/jellyfin"
+    strip-beszel:
+      stripPrefix:
+        prefixes:
+          - "/beszel"
+
+  services:
+    homepage:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3000"
+
+    jellyfin:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8096"
+
+    transmission:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8091"
+
+    beszel:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8090"

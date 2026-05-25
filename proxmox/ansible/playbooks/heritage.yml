@@ -47,11 +47,8 @@
     - name: Configure Tailscale Serve
       ansible.builtin.shell:
         cmd: |
-          tailscale serve --bg --set-path / 3000
-          tailscale serve --bg --set-path /jellyfin 8096
-          tailscale serve --bg --set-path /transmission 8091
-          tailscale serve --bg --set-path /gatus 8088
-          tailscale serve --bg --set-path /beszel 8090
+          tailscale serve reset
+          tailscale serve --bg --set-path / 9080
       changed_when: true
 
     # --- Docker ---

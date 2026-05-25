@@ -1,4 +1,14 @@
 services:
+  # --- L7 Reverse Proxy ---
+  traefik:
+    image: traefik:v3
+    container_name: traefik
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+
   # --- Dashboard ---
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
@@ -77,6 +87,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Asia/Ho_Chi_Minh
+      - JELLYFIN_BaseUrl=
     volumes:
       - ./jellyfin/config:/config
       - ./jellyfin/cache:/cache
