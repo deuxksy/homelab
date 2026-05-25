@@ -1,0 +1,38 @@
+---
+envVars: true
+
+providers:
+  finnhub: {{HOMEPAGE_VAR_FINNHUB_KEY}}
+
+title: Heritage
+language: en
+showStats: true
+statusStyle: dot
+target: _blank
+hideVersion: false
+cardBlur: sm
+theme: dark
+color: zinc
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: true
+  showSearchSuggestions: true
+  hideVisitURL: true
+  provider: google
+header:
+  show: true
+  left:
+    - time
+layout:
+  Info:
+    style: row
+    columns: 2
+  Monitoring:
+    style: row
+    columns: 2
+  Acquisition:
+    style: row
+    columns: 1
+  Streaming:
+    style: row
+    columns: 1

@@ -1,11 +1,12 @@
 ---
 - name: Deploy heritage media server
-  hosts: heritage
+  hosts: heritage_hosts
   gather_facts: true
   vars:
-    heritage_repo: /opt/heritage
+    heritage_dir: /opt/heritage
 
   tasks:
+    # --- System packages ---
     - name: Install dependencies
       ansible.builtin.apt:
         name:
@@ -16,6 +17,43 @@
         state: present
         update_cache: true
 
+    # --- Tailscale (LXC 호스트에 직접 설치) ---
+    - name: Install Tailscale
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://tailscale.com/install.sh | sh
+        creates: /usr/bin/tailscaled
+
+    - name: Enable tailscaled
+      ansible.builtin.systemd:
+        name: tailscaled
+        state: started
+        enabled: true
+
+    - name: Check Tailscale status
+      ansible.builtin.command: tailscale status --json
+      register: ts_status
+      changed_when: false
+      failed_when: false
+
+    - name: Connect to Tailscale
+      ansible.builtin.shell:
+        cmd: tailscale up --authkey={{ ts_authkey }} --hostname=heritage --accept-dns=true
+      when:
+        - ts_authkey is defined
+        - ts_status.rc != 0
+      no_log: true
+
+    - name: Configure Tailscale Serve
+      ansible.builtin.shell:
+        cmd: |
+          tailscale serve --bg / http://127.0.0.1:3000
+          tailscale serve --bg /jellyfin http://127.0.0.1:8096
+          tailscale serve --bg /transmission http://127.0.0.1:8091
+          tailscale serve --bg /gatus http://127.0.0.1:8088
+          tailscale serve --bg /beszel http://127.0.0.1:8090
+      changed_when: true
+
+    # --- Docker ---
     - name: Add Docker GPG key
       ansible.builtin.shell:
         cmd: |
@@ -43,22 +81,50 @@
           - docker-compose-plugin
         state: present
 
-    - name: Clone heritage repo
-      ansible.builtin.git:
-        repo: git@github.com:deuxksy/heritage.git
-        dest: "{{ heritage_repo }}"
-        version: main
-        accept_hostkey: true
+    # --- Heritage 배포 ---
+    - name: Create heritage directory
+      ansible.builtin.file:
+        path: "{{ heritage_dir }}"
+        state: directory
+        mode: "0755"
 
-    - name: Decrypt .env.sops
+    - name: Deploy heritage configs
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../../../heritage/"
+        dest: "{{ heritage_dir }}/"
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=.env"
+          - "--exclude=beszel/data"
+          - "--exclude=gatus/data"
+          - "--exclude=jellyfin/cache"
+          - "--exclude=transmission/data"
+
+    - name: Decrypt .env.sops locally
       ansible.builtin.shell:
-        cmd: sops -d .env.sops > .env
-        chdir: "{{ heritage_repo }}"
+        cmd: sops -d --input-type binary --output-type binary {{ playbook_dir }}/../../../heritage/.env.sops > /tmp/heritage.env
+      delegate_to: localhost
+      changed_when: true
+      no_log: true
+
+    - name: Deploy .env to heritage
+      ansible.builtin.copy:
+        src: /tmp/heritage.env
+        dest: "{{ heritage_dir }}/.env"
+        mode: "0600"
+      no_log: true
+
+    - name: Clean up local temp .env
+      ansible.builtin.file:
+        path: /tmp/heritage.env
+        state: absent
+      delegate_to: localhost
       changed_when: true
 
+    # --- 서비스 시작 ---
     - name: Start heritage services
       community.docker.docker_compose_v2:
-        project_src: "{{ heritage_repo }}"
+        project_src: "{{ heritage_dir }}"
         state: present
       environment:
         DOCKER_HOST: unix:///run/docker.sock

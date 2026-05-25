@@ -1,0 +1,25 @@
+---
+- greeting:
+    text_size: xl
+
+- resources:
+    cpu: true
+    memory: true
+    network: true
+    ipv4: true
+    externalip: true
+    uptime: true
+
+- datetime:
+    text_size: xl
+    format:
+      timeStyle: short
+      dateStyle: long
+      hourCycle: h23
+
+- openmeteo:
+    label: TP.HCM
+    latitude: {{HOMEPAGE_VAR_LATITUDE}}
+    longitude: {{HOMEPAGE_VAR_LONGITUDE}}
+    units: metric
+    cache: 10

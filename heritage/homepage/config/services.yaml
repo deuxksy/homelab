@@ -1,0 +1,86 @@
+- Info:
+    - Calendar:
+        widget:
+          type: calendar
+          firstDayInWeek: sunday
+          view: monthly
+          timezone: Asia/Ho_Chi_Minh
+          integrations:
+            - type: ical
+              url: https://calendar.google.com/calendar/ical/deuxksy%40gmail.com/public/basic.ics
+              name: Google Calendar
+              color: amber
+    - Stocks:
+        widget:
+          type: stocks
+          provider: finnhub
+          watchlist:
+            - EWY
+            - SPY
+            - QQQ
+            - ASHR
+            - KSTR
+            - EWJ
+            - INDY
+            - VNM
+            - FEZ
+
+    - Agenda:
+        widget:
+          type: calendar
+          view: agenda
+          maxEvents: 10
+          showTime: true
+          previousDays: 3
+          integrations:
+
+- Monitoring:
+    - Beszel:
+        label: "Service Monitor"
+        icon: beszel.png
+        href: https://heritage.bun-bull.ts.net/beszel
+        container: beszel-hub
+        widget:
+          type: beszel
+          url: http://localhost:8090
+          username: {{HOMEPAGE_VAR_BESZEL_USERNAME}}
+          password: {{HOMEPAGE_VAR_BESZEL_PASSWORD}}
+          version: 2
+
+    - Gatus:
+        label: "Uptime Monitor"
+        icon: gatus.png
+        href: https://heritage.bun-bull.ts.net/gatus
+        container: gatus
+        widget:
+          type: gatus
+          version: 2
+          url: http://localhost:8088
+
+- Acquisition:
+    - Transmission:
+        label: "Download Node"
+        icon: transmission.png
+        href: https://heritage.bun-bull.ts.net/transmission/web/
+        container: transmission
+        widget:
+          type: transmission
+          url: http://localhost:8091
+
+- Streaming:
+    - Jellyfin:
+        label: "Media Server"
+        icon: jellyfin.png
+        href: https://heritage.bun-bull.ts.net/jellyfin
+        container: jellyfin
+        widget:
+          type: jellyfin
+          url: http://localhost:8096
+          key: {{HOMEPAGE_VAR_KEY_JELLYFIN}}
+          version: 2
+          enableBlocks: true
+          enableNowPlaying: true
+          enableUser: true
+          enableMediaControl: false
+          showEpisodeNumber: true
+          expandOneStreamToTwoRows: false

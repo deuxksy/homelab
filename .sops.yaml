@@ -6,3 +6,7 @@ creation_rules:
     key_groups:
       - age:
           - *crong
+  - path_regex: ^.*\.env\.sops$
+    key_groups:
+      - age:
+          - *crong

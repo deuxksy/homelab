@@ -35,6 +35,20 @@ resource "proxmox_virtual_environment_container" "heritage" {
 
   features {
     nesting = true
+    keyctl  = true
+  }
+
+  # Tailscale용 TUN 디바이스는 pct set --dev0 /dev/net/tun으로 수동 설정 필요
+  # provider v0.106 미지원
+
+  mount_point {
+    volume = "/mnt/data1"
+    path   = "/mnt/data1"
+  }
+
+  mount_point {
+    volume = "/mnt/data2"
+    path   = "/mnt/data2"
   }
 
   network_interface {

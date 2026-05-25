@@ -12,10 +12,17 @@ Homelab IaC for walle (Proxmox VE 9.2) — OpenTofu로 VM/LXC 프로비저닝, T
 walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 ├── VM 100: talos-master (K8s control-plane)
 ├── VM 101: talos-worker (K8s worker)
-└── LXC 200: heritage (Debian 12, Docker Compose 미디어 서버)
+└── LXC 200: heritage (Debian 12, Docker + Tailscale Serve)
+    ├── Homepage (dashboard)
+    ├── Transmission (torrent)
+    ├── Jellyfin (streaming)
+    ├── Gatus (uptime monitoring)
+    └── Beszel (hw monitoring)
 ```
 
 **프로비저닝 흐름:** OpenTofu → talhelper/talosctl → Ansible
+
+**외부 접속:** Tailscale을 LXC 호스트에 직접 설치(systemd). `tailscale serve`로 path-based 라우팅. Caddy 없이 TLS 종료까지 Tailscale이 처리.
 
 ## Full Provisioning Workflow
 
@@ -67,6 +74,7 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 | :--- | :--- |
 | `proxmox/opentofu/` | OpenTofu 프로비저닝 (provider, variables, talos.tf, heritage.tf, outputs.tf) |
 | `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북 |
+| `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, gatus) |
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
 | `scripts/` | Proxmox 호스트 실행 스크립트 (템플릿 생성 등) |
 | `.sops.yaml` | sops 암호화 규칙 (age 키) |
@@ -77,5 +85,7 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini`, `talconfig.yaml` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요
+- **Heritage LXC:** `/dev/net/tun` 디바이스 패스스루 + `keyctl=true` 필요 (Tailscale용). `heritage.tf`에 이미 설정됨
+- **Heritage 외부 접속:** `heritage.bun-bull.ts.net` — Tailscale LXC 호스트 설치 + `tailscale serve`로 path-based 라우팅 (Caddy 불필요)
 - **Proxmox 초기 설정:** 재설치 후 enterprise repo 비활성화 필요 (`pve-enterprise.sources` → `.disabled`). no-subscription repo는 trixie(PVE 9) 사용: `deb http://download.proxmox.com/debian/pve trixie pve-no-subscription`
 - **LXC 템플릿:** `pveam update && pveam download local <template-name>` — Proxmox에서 LXC용 OS 템플릿 다운로드. `pveam available --section system`으로 목록 확인

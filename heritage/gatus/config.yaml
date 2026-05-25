@@ -1,0 +1,50 @@
+web:
+  port: 8088
+
+storage:
+  type: sqlite
+  path: /data/gatus.db
+
+ui:
+  title: "Heritage Status"
+  header: "Heritage Services Health"
+
+endpoints:
+  # --- Infrastructure ---
+  - name: Homepage
+    group: Infrastructure
+    url: "http://localhost:3000"
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: Beszel
+    group: Infrastructure
+    url: "http://localhost:8090"
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+
+  # --- Certificates ---
+  - name: heritage.bun-bull.ts.net (TLS)
+    group: Certificates
+    url: "https://heritage.bun-bull.ts.net"
+    interval: 24h
+    conditions:
+      - "[CERTIFICATE_EXPIRATION] > 720h"
+
+  # --- Services ---
+  - name: Transmission
+    group: Services
+    url: "http://localhost:8091/transmission/web/"
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+
+  # --- Streaming ---
+  - name: Jellyfin
+    group: Streaming
+    url: "http://localhost:8096/health"
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
