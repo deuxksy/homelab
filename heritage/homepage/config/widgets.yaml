@@ -18,7 +18,7 @@
       hourCycle: h23
 
 - openmeteo:
-    label: TP.HCM
+    label: 구로구
     latitude: {{HOMEPAGE_VAR_LATITUDE}}
     longitude: {{HOMEPAGE_VAR_LONGITUDE}}
     units: metric
