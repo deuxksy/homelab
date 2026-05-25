@@ -23,7 +23,19 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 
 **프로비저닝 흐름:** OpenTofu → talhelper/talosctl → Ansible
 
-**외부 접속:** `tailscale serve`(443→9080) → Traefik(L7 리버스 프록시) → 각 서비스. TLS 종료는 Tailscale이 처리. Gatus는 SPA subpath 미지원으로 `:8088` 직접 접속.
+**외부 접속:** `tailscale serve`(443→9080) → Traefik(L7 리버스 프록시) → 각 서비스. TLS 종료는 Tailscale이 처리.
+
+**서비스 접속 URL** (Tailnet 내에서만 접근):
+
+| 서비스 | URL | 비고 |
+| :--- | :--- | :--- |
+| Homepage | `https://heritage.bun-bull.ts.net/` | 대시보드 |
+| Jellyfin | `https://heritage.bun-bull.ts.net/jellyfin` | 스트리밍 |
+| Transmission | `https://heritage.bun-bull.ts.net/transmission` | 토렌트 |
+| Beszel | `https://heritage.bun-bull.ts.net/beszel` | HW 모니터링 |
+| Gatus | `http://heritage.bun-bull.ts.net:8088` | SPA subpath 미지원, 직접 접속 |
+| Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
+| K8s API | `https://192.168.221.172:6443` | 내부망만 |
 
 ## Full Provisioning Workflow
 
@@ -65,10 +77,31 @@ sops -e plain.yaml > secrets.sops.yaml # 암호화
 ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 ```
 
+## Day-to-Day Operations
+
+```bash
+# K8s 클러스터 상태
+KUBECONFIG=~/.kube/homelab.config kubectl get nodes -o wide
+KUBECONFIG=~/.kube/homelab.config kubectl get pods -A
+
+# Heritage 서비스 재시작
+ssh heritage "cd /opt/heritage && docker compose restart <service>"
+
+# Heritage 로그 확인
+ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 <service>"
+
+# Talos 노드 재부팅 / kubelet 재시작
+TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 reboot
+TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 service kubelet restart
+
+# Proxmox VM/LXC 상태
+ssh root@walle.bun-bull.ts.net "qm list; pct list"
+```
+
 ## Key Constraints
 
 - **Provider:** bpg/proxmox v0.106+ (v0.70 API와 호환되지 않음). Container 리소스는 `initialization`, `operating_system`, `disk` 블록 사용 (구 `hostname`, `ostemplate`, `rootfs` 불가)
-- **Talos VM:** QEMU guest agent 미지원 → `started = false`로 생성 후 수동 시작. 부팅 순서 `ide2`(CDROM) 우선 필요
+- **Talos VM:** QEMU guest agent 미지원 → `started = false`로 생성 후 수동 시작. 설치 후 반드시 `qm set <ID> --boot order=scsi0`로 디스크 부팅 전환 (Gotchas 참조)
 - **Endpoint:** `walle.bun-bull.ts.net:8006` (Tailscale). `walle.bun-bull.ts.net` (443, Tailscale Serve). `insecure = true` 필요 (자가 서명 인증서)
 - **Secrets:** `proxmox/opentofu/secrets.sops.yaml` — age 키로 sops 암호화. API Token 형식: `root@pam!<token-name>=<secret>`
 - **SSH:** `ssh root@walle.bun-bull.ts.net` (root 접속). SSH config의 `Host walle`은 user=crong이라 root 명령어 불가
@@ -85,6 +118,8 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 | `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, gatus) |
 | `heritage/traefik/` | Traefik L7 리버스 프록시 설정 (static + dynamic YAML) |
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
+| `k8s/talsecret.yaml` | 클러스터 시크릿 (gitignore, 분실 시 재부트스트랩 필요) |
+| `k8s/clusterconfig/` | talhelper 생성 산출물 — machine config + talosconfig (gitignore) |
 | `scripts/` | Proxmox 호스트 실행 스크립트 (템플릿 생성 등) |
 | `docs/` | 문서 (architecture.md, specs, plans) |
 | `.mcp.json` | MCP 서버 설정 — proxmox, k8sgpt (kubeconfig: `~/.kube/homelab.config`) |
