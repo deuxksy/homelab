@@ -51,8 +51,11 @@ cd proxmox/ansible && ansible-playbook playbooks/heritage.yml
 ## Other Commands
 
 ```bash
+# OpenTofu 초기화 및 검증
+cd proxmox/opentofu && tofu init
+tofu validate
+
 # Secrets — sops 암호화/복호화
-cd proxmox/opentofu
 sops -d secrets.sops.yaml              # 복호화 (평문 출력)
 sops -e plain.yaml > secrets.sops.yaml # 암호화
 
@@ -81,6 +84,8 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 | `heritage/traefik/` | Traefik L7 리버스 프록시 설정 (static + dynamic YAML) |
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
 | `scripts/` | Proxmox 호스트 실행 스크립트 (템플릿 생성 등) |
+| `docs/` | 문서 (architecture.md, specs, plans) |
+| `.mcp.json` | MCP 서버 설정 — proxmox(k8sgpt는 kubeconfig 생성 후 활성화) |
 | `.sops.yaml` | sops 암호화 규칙 (age 키) |
 
 ## Gotchas
@@ -97,3 +102,15 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 - **Tailscale Serve HTTPS 백엔드:** 자가 서명 인증서 백엔드는 `https+insecure://` 스킴 사용 필요 (일반 `https://`는 502 에러)
 - **Proxmox 초기 설정:** 재설치 후 enterprise repo 비활성화 필요 (`pve-enterprise.sources` → `.disabled`). no-subscription repo는 trixie(PVE 9) 사용: `deb http://download.proxmox.com/debian/pve trixie pve-no-subscription`
 - **LXC 템플릿:** `pveam update && pveam download local <template-name>` — Proxmox에서 LXC용 OS 템플릿 다운로드. `pveam available --section system`으로 목록 확인
+
+## MCP Servers
+
+`.mcp.json`으로 관리. Claude Code 시작 시 자동 로드.
+
+| 서버 | 상태 | 비고 |
+| :--- | :--- | :--- |
+| proxmox | 활성 | `proxmox-mcp-plus` (uv), 설정: `~/.config/proxmox-mcp/config.json` |
+| k8sgpt | 비활성 | `/opt/homebrew/bin/k8sgpt`, KUBECONFIG(`~/.kube/homelab.config`) 생성 필요 |
+
+- **Proxmox MCP 설정:** `~/.config/proxmox-mcp/config.json` — host, API token, `verify_ssl=false` + `dev_mode=true` (자가 서명 인증서)
+- **K8sgpt 활성화:** Talos 부트스트랩 후 `talosctl kubeconfig --nodes <MASTER_IP> ~/.kube/homelab.config` 실행

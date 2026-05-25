@@ -13,5 +13,8 @@ secrets.sops.yaml.dec
 # Remember
 .remember/
 
+# MCP (local paths)
+.mcp.json
+
 # OS
 .DS_Store
