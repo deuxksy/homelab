@@ -1,24 +1,23 @@
 ---
 - Developer:
     - Github:
-        - Profile:
-            - abbr: GH
-              href: https://github.com/deuxksy
-        - today-vn-news:
-            - abbr: TVN
-              href: https://github.com/deuxksy/today-vn-news
-        - PushOver:
-            - abbr: PO
-              href: https://github.com/deuxksy/PushOver
-        - ai-agent-skill:
-            - abbr: AI
-              href: https://github.com/deuxksy/ai-agent-skill
-        - dotfiles:
-            - abbr: DF
-              href: https://github.com/deuxksy/dotfiles
-        - sylph:
-            - abbr: SY
-              href: https://github.com/deuxksy/sylph
-        - homelab:
-            - abbr: HL
-              href: https://github.com/deuxksy/homelab
+        - abbr: GH
+          href: https://github.com/deuxksy
+    - today-vn-news:
+        - abbr: TVN
+          href: https://github.com/deuxksy/today-vn-news
+    - PushOver:
+        - abbr: PO
+          href: https://github.com/deuxksy/PushOver
+    - ai-agent-skill:
+        - abbr: AI
+          href: https://github.com/deuxksy/ai-agent-skill
+    - dotfiles:
+        - abbr: DF
+          href: https://github.com/deuxksy/dotfiles
+    - sylph:
+        - abbr: SY
+          href: https://github.com/deuxksy/sylph
+    - homelab:
+        - abbr: HL
+          href: https://github.com/deuxksy/homelab
