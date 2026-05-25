@@ -1,0 +1,19 @@
+---
+- name: Configure walle Tailscale Serve
+  hosts: proxmox_hosts
+  gather_facts: false
+
+  tasks:
+    - name: Check current Tailscale Serve status
+      ansible.builtin.command: tailscale serve status
+      register: ts_serve_status
+      changed_when: false
+      failed_when: false
+
+    - name: Configure Tailscale Serve (443 → 8006)
+      ansible.builtin.shell:
+        cmd: |
+          tailscale serve reset
+          tailscale serve --bg --set-path / https://127.0.0.1:8006
+      when: "'https://127.0.0.1:8006' not in ts_serve_status.stdout"
+      changed_when: true
