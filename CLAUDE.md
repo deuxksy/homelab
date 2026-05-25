@@ -75,6 +75,7 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 | :--- | :--- |
 | `proxmox/opentofu/` | OpenTofu 프로비저닝 (provider, variables, talos.tf, heritage.tf, outputs.tf) |
 | `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북 |
+| `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, talos) |
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve 설정 (443→8006) |
 | `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, gatus) |
 | `heritage/traefik/` | Traefik L7 리버스 프록시 설정 (static + dynamic YAML) |
@@ -84,6 +85,8 @@ ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
 
 ## Gotchas
 
+- **Bash CWD:** `cd proxmox/ansible && ...` 실행 후 CWD가 변경됨. 후속 git 명령어는 반드시 절대 경로 또는 `cd /Users/crong/git/homelab &&` 선행 필요
+- **Proxmox HTTP 검증:** `curl -sI`(HEAD)는 501 반환. GET으로 검증: `curl -s -o /dev/null -w "%{http_code}" https://walle.bun-bull.ts.net`
 - **Boot order:** Talos VM 클론 후 `boot order=scsi0`(빈 디스크)로 설정됨. `qm set <ID> --boot order=ide2`로 CDROM 부팅으로 변경해야 Talos ISO가 로드됨. 이후 talosctl apply-config로 설치하면 디스크 부팅으로 전환됨
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini`, `talconfig.yaml` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
