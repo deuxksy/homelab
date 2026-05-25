@@ -75,7 +75,7 @@
         container: jellyfin
         widget:
           type: jellyfin
-          url: http://localhost:8096
+          url: http://localhost:8096/jellyfin
           key: {{HOMEPAGE_VAR_KEY_JELLYFIN}}
           version: 2
           enableBlocks: true

@@ -74,7 +74,7 @@ services:
       - ./beszel/socket:/beszel_socket
     environment:
       - TZ=Asia/Ho_Chi_Minh
-      - APP_URL=${BESZEL_APP_URL}
+      - APP_URL=https://heritage.bun-bull.ts.net/beszel
 
   # --- Streaming ---
   jellyfin:
