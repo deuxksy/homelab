@@ -90,6 +90,12 @@ ssh heritage "cd /opt/heritage && docker compose restart <service>"
 # Heritage 로그 확인
 ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 <service>"
 
+# Heritage 파일 권한 확인
+ssh crong@walle.bun-bull.ts.net "ls -la /mnt/data1/torrent/ /mnt/data2/torrent/"
+
+# Heritage 파일 소유권 변경 (호스트에서 UID 101000 사용)
+ssh crong@walle.bun-bull.ts.net "chown -R 101000:101000 /mnt/data1/torrent/ /mnt/data2/torrent/"
+
 # Talos 노드 재부팅 / kubelet 재시작
 TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 reboot
 TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 service kubelet restart
@@ -105,6 +111,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **Endpoint:** `walle.bun-bull.ts.net:8006` (Tailscale). `walle.bun-bull.ts.net` (443, Tailscale Serve). `insecure = true` 필요 (자가 서명 인증서)
 - **Secrets:** `proxmox/opentofu/secrets.sops.yaml` — age 키로 sops 암호화. API Token 형식: `root@pam!<token-name>=<secret>`
 - **SSH:** `ssh root@walle.bun-bull.ts.net` (root 접속). SSH config의 `Host walle`은 user=crong이라 root 명령어 불가
+- **Heritage SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, sudo 권한 포함). 파일 시스템 관리용 사용자
 - **DHCP IP 조회:** `ssh arv "cat /tmp/dhcp.leases"` — 공유기(OpenWrt)에서 VM MAC 주소로 IP 매핑
 
 ## File Layout
@@ -128,6 +135,8 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 ## Gotchas
 
 - **Bash CWD:** `cd proxmox/ansible && ...` 실행 후 CWD가 변경됨. 후속 git 명령어는 반드시 절대 경로 또는 `cd /Users/crong/git/homelab &&` 선행 필요
+- **Heritage LXC UID 매핑:** LXC 200은 unprivileged → 컨테이너 UID N → 호스트 UID 100000+N 매핑. 현재 crong 사용자 UID 101000은 컨테이너 내 UID 1000으로 매핑됨
+- **Transmission/Jellyfin 권한:** 호스트 `/mnt/data{1,2}/torrent/`는 UID 101000:101000 소유(권한 700). Transmission(PUID=1000)과 Jellyfin(user:1000:1000)이 동일 UID 사용
 - **Proxmox HTTP 검증:** `curl -sI`(HEAD)는 501 반환. GET으로 검증: `curl -s -o /dev/null -w "%{http_code}" https://walle.bun-bull.ts.net`
 - **Boot order:** Talos VM 클론 후 `boot order=scsi0`(빈 디스크)로 설정됨. 최초 부팅만 `qm set <ID> --boot order=ide2`로 CDROM 부팅하여 ISO 로드 → `talosctl apply-config --insecure`로 설치 후 `qm set <ID> --boot order=scsi0`로 디스크 부팅 전환 필요
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
@@ -154,3 +163,4 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 
 - **Proxmox MCP 설정:** `~/.config/proxmox-mcp/config.json` — host, API token, `verify_ssl=false` + `dev_mode=true` (자가 서명 인증서)
 - **K8sgpt 활성화:** KUBECONFIG `~/.kube/homelab.config` 설정 완료. Talos 재부트스트랩 시: `cd k8s && TALOSCONFIG=clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 kubeconfig ~/.kube/homelab.config --force`
+- **Heritage 사용자:** crong(UID 101000)는 LXC 200 내에서 UID 1000으로 매핑됨. 호스트에서 파일 관리 시 `chown 101000:101000` 사용
