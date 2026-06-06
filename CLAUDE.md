@@ -18,7 +18,8 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
     ├── Transmission (torrent)
     ├── Jellyfin (streaming)
     ├── Gatus (uptime monitoring)
-    └── Beszel (hw monitoring)
+    ├── Beszel (hw monitoring)
+    └── Aria2 (다운로드 매니저, port 6800)
 ```
 
 **프로비저닝 흐름:** OpenTofu → talhelper/talosctl → Ansible
@@ -35,6 +36,7 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | Beszel | `https://heritage.bun-bull.ts.net/beszel` | HW 모니터링 |
 | Gatus | `http://heritage.bun-bull.ts.net:8088` | SPA subpath 미지원, 직접 접속 |
 | Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
+| Aria2 RPC | `ws://<heritage-ip>:6800/jsonrpc` | 다운로드 매니저, RPC 클라이언트로 접속 |
 | K8s API | `https://192.168.221.172:6443` | 내부망만 |
 
 ## Full Provisioning Workflow
@@ -100,6 +102,12 @@ ssh crong@walle.bun-bull.ts.net "chown -R 101000:101000 /mnt/data1/torrent/ /mnt
 TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 reboot
 TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 service kubelet restart
 
+# Aria2 로그 확인
+ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 aria2"
+
+# Aria2 재시작
+ssh heritage "cd /opt/heritage && docker compose restart aria2"
+
 # Proxmox VM/LXC 상태
 ssh root@walle.bun-bull.ts.net "qm list; pct list"
 ```
@@ -122,7 +130,8 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 | `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북 |
 | `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, talos) |
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve 설정 (443→8006) |
-| `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, gatus) |
+| `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, gatus, aria2) |
+| `heritage/.env` | 환경변수 (ARIA2_RPC_SECRET 포함) |
 | `heritage/traefik/` | Traefik L7 리버스 프록시 설정 (static + dynamic YAML) |
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
 | `k8s/talsecret.yaml` | 클러스터 시크릿 (gitignore, 분실 시 재부트스트랩 필요) |
