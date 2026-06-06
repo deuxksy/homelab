@@ -71,10 +71,6 @@
         label: "Download Manager"
         icon: aria2.png
         container: aria2
-        widget:
-          type: aria2
-          url: http://localhost:6800/jsonrpc
-          secret: P3TERX
 
 - Streaming:
     - Jellyfin:
