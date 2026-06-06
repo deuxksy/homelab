@@ -59,13 +59,22 @@
 
 - Acquisition:
     - Transmission:
-        label: "Download Node"
+        label: "Torrent Node"
         icon: transmission.png
         href: https://heritage.bun-bull.ts.net/transmission/web/
         container: transmission
         widget:
           type: transmission
           url: http://localhost:8091
+
+    - Aria2:
+        label: "Download Manager"
+        icon: aria2.png
+        container: aria2
+        widget:
+          type: aria2
+          url: http://localhost:6800/jsonrpc
+          secret: P3TERX
 
 - Streaming:
     - Jellyfin:
