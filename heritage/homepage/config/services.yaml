@@ -34,29 +34,6 @@
           previousDays: 3
           integrations:
 
-- Monitoring:
-    - Beszel:
-        label: "Service Monitor"
-        icon: beszel.png
-        href: https://heritage.bun-bull.ts.net/beszel
-        container: beszel-hub
-        widget:
-          type: beszel
-          url: http://localhost:8090
-          username: {{HOMEPAGE_VAR_BESZEL_USERNAME}}
-          password: {{HOMEPAGE_VAR_BESZEL_PASSWORD}}
-          version: 2
-
-    - Gatus:
-        label: "Uptime Monitor"
-        icon: gatus.png
-        href: http://heritage.bun-bull.ts.net:8088
-        container: gatus
-        widget:
-          type: gatus
-          version: 2
-          url: http://localhost:8088
-
 - Acquisition:
     - Transmission:
         label: "Torrent Node"
@@ -66,11 +43,6 @@
         widget:
           type: transmission
           url: http://localhost:8091
-
-    - Aria2:
-        label: "Download Manager"
-        icon: aria2.png
-        container: aria2
 
 - Streaming:
     - Jellyfin:
