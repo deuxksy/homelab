@@ -13,7 +13,7 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 ├── VM 100: talos-master (K8s control-plane)
 ├── VM 101: talos-worker (K8s worker)
 └── LXC 200: heritage (Debian 12, Docker + Tailscale Serve)
-    ├── Traefik (L7 reverse proxy, port 9080)
+    ├── Caddy (L7 reverse proxy, port 9080)
     ├── Homepage (dashboard)
     ├── Transmission (torrent)
     ├── Jellyfin (streaming)
@@ -22,7 +22,7 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 
 **프로비저닝 흐름:** OpenTofu → talhelper/talosctl → Ansible
 
-**외부 접속:** `tailscale serve`(443→9080) → Traefik(L7 리버스 프록시) → 각 서비스. TLS 종료는 Tailscale이 처리.
+**외부 접속:** `tailscale serve`(443→9080) → Caddy(L7 리버스 프록시) → 각 서비스. TLS 종료는 Tailscale이 처리.
 
 **서비스 접속 URL** (Tailnet 내에서만 접근):
 
@@ -89,6 +89,12 @@ ssh heritage "cd /opt/heritage && docker compose restart <service>"
 # Heritage 로그 확인
 ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 <service>"
 
+# Caddy 서비스 재시작
+ssh heritage "cd /opt/heritage && docker compose restart caddy"
+
+# Caddy 로그 확인
+ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 caddy"
+
 # Heritage 파일 권한 확인
 ssh crong@walle.bun-bull.ts.net "ls -la /mnt/data1/torrent/ /mnt/data2/torrent/"
 
@@ -125,7 +131,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve 설정 (443→8006) |
 | `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, aria2) |
 | `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스) |
-| `heritage/traefik/` | Traefik L7 리버스 프록시 설정 (static + dynamic YAML) |
+| `heritage/caddy/` | Caddy L7 리버스 프록시 설정 (Caddyfile) |
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
 | `k8s/talsecret.yaml` | 클러스터 시크릿 (gitignore, 분실 시 재부트스트랩 필요) |
 | `k8s/clusterconfig/` | talhelper 생성 산출물 — machine config + talosconfig (gitignore) |
@@ -145,8 +151,8 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **DHCP IP:** `hosts.ini`, `talconfig.yaml` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요
 - **Heritage LXC:** `/dev/net/tun` 디바이스 패스스루 + `keyctl=true` 필요 (Tailscale용). `heritage.tf`에 이미 설정됨
-- **Heritage 외부 접속:** `heritage.bun-bull.ts.net` — Tailscale LXC 호스트 설치 + `tailscale serve`로 path-based 라우팅 (Caddy 불필요)
-- **Traefik 라우팅:** Tailscale Serve(443→9080) → Traefik → 서비스. Homepage(`/`), Transmission(`/transmission`), Jellyfin(`/jellyfin`) path-based 라우팅
+- **Heritage 외부 접속:** `heritage.bun-bull.ts.net` — Tailscale LXC 호스트 설치 + `tailscale serve`로 path-based 라우팅 (Caddy 사용)
+- **Caddy 라우팅:** Tailscale Serve(443→9080) → Caddy → 서비스. Homepage(`/`), Transmission(`/transmission`), Jellyfin(`/jellyfin`) path-based 라우팅
 - **Tailscale Serve HTTPS 백엔드:** 자가 서명 인증서 백엔드는 `https+insecure://` 스킴 사용 필요 (일반 `https://`는 502 에러)
 - **Proxmox 초기 설정:** 재설치 후 enterprise repo 비활성화 필요 (`pve-enterprise.sources` → `.disabled`). no-subscription repo는 trixie(PVE 9) 사용: `deb http://download.proxmox.com/debian/pve trixie pve-no-subscription`
 - **LXC 템플릿:** `pveam update && pveam download local <template-name>` — Proxmox에서 LXC용 OS 템플릿 다운로드. `pveam available --section system`으로 목록 확인
