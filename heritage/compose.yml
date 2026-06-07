@@ -86,7 +86,7 @@ services:
     user: "1000:1000"
     environment:
       - TZ=Asia/Seoul
-      - JELLYFIN_BaseUrl=
+      - JELLYFIN_BaseUrl=/jellyfin
     volumes:
       - ./jellyfin/config:/config
       - ./jellyfin/cache:/cache
