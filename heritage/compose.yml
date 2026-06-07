@@ -1,13 +1,14 @@
 services:
   # --- L7 Reverse Proxy ---
-  traefik:
-    image: traefik:v3
-    container_name: traefik
+  caddy:
+    image: caddy:latest
+    container_name: caddy
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
   # --- Dashboard ---
   homepage:
@@ -130,6 +131,8 @@ services:
         max-size: 1m
 volumes:
   aria2-config:
+  caddy_data:
+  caddy_config:
 
 networks:
   heritage:
