@@ -20,7 +20,7 @@ services:
     environment:
       - PUID=1000
       - PGID=996
-      - TZ=Asia/Ho_Chi_Minh
+      - TZ=Asia/Seoul
       - HOMEPAGE_ALLOWED_HOSTS=*
     volumes:
       - ./homepage/config:/app/config
@@ -41,7 +41,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=Asia/Ho_Chi_Minh
+      - TZ=Asia/Seoul
     volumes:
       - ./transmission/config:/config
       - ./transmission/data:/data
@@ -60,7 +60,7 @@ services:
 #       - ./gatus/config.yaml:/config/config.yaml:ro
 #       - ./gatus/data:/data
 #     environment:
-#       - TZ=Asia/Ho_Chi_Minh
+#       - TZ=Asia/Seoul
 #
 #   beszel:
 #     image: docker.io/henrygd/beszel:latest
@@ -72,7 +72,7 @@ services:
 #       - ./beszel/data:/beszel_data
 #       - ./beszel/socket:/beszel_socket
 #     environment:
-#       - TZ=Asia/Ho_Chi_Minh
+#       - TZ=Asia/Seoul
 #       - APP_URL=https://heritage.bun-bull.ts.net/beszel
 #
   # --- Streaming ---
@@ -84,7 +84,7 @@ services:
       - "8096:8096"
     user: "1000:1000"
     environment:
-      - TZ=Asia/Ho_Chi_Minh
+      - TZ=Asia/Seoul
       - JELLYFIN_BaseUrl=
     volumes:
       - ./jellyfin/config:/config
