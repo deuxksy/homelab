@@ -1,0 +1,17 @@
+:9080 {
+    # Jellyfin (Base URL 설정 필요)
+    redir /jellyfin /jellyfin/
+    handle /jellyfin/* {
+        reverse_proxy localhost:8096
+    }
+
+    # Transmission (prefix 유지)
+    handle /transmission* {
+        reverse_proxy localhost:8091
+    }
+
+    # Homepage (catch-all)
+    handle {
+        reverse_proxy localhost:3000
+    }
+}
