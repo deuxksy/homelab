@@ -17,8 +17,6 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
     ├── Homepage (dashboard)
     ├── Transmission (torrent)
     ├── Jellyfin (streaming)
-    ├── Gatus (uptime monitoring)
-    ├── Beszel (hw monitoring)
     └── Aria2 (다운로드 매니저, port 6800)
 ```
 
@@ -33,8 +31,6 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | Homepage | `https://heritage.bun-bull.ts.net/` | 대시보드 |
 | Jellyfin | `https://heritage.bun-bull.ts.net/jellyfin` | 스트리밍 |
 | Transmission | `https://heritage.bun-bull.ts.net/transmission` | 토렌트 |
-| Beszel | `https://heritage.bun-bull.ts.net/beszel` | HW 모니터링 |
-| Gatus | `http://heritage.bun-bull.ts.net:8088` | SPA subpath 미지원, 직접 접속 |
 | Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
 | Aria2 RPC | `ws://heritage.bun-bull.ts.net:6800/jsonrpc` | 다운로드 매니저, RPC Secret: P3TERX |
 | K8s API | `https://192.168.221.172:6443` | 내부망만 |
@@ -67,7 +63,8 @@ cd proxmox/ansible && ansible-playbook playbooks/heritage.yml
 ## Other Commands
 
 ```bash
-# OpenTofu 초기화 및 검증
+# OpenTofu 초기화 및 검증 (R2 자격 증명 필요)
+source ~/git/twenty-four-seven-three-sixty-five/.env
 cd proxmox/opentofu && tofu init
 tofu validate
 
@@ -115,16 +112,18 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **SSH:** `ssh root@walle.bun-bull.ts.net` (root 접속). SSH config의 `Host walle`은 user=crong이라 root 명령어 불가
 - **Heritage SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, sudo 권한 포함). 파일 시스템 관리용 사용자
 - **DHCP IP 조회:** `ssh arv "cat /tmp/dhcp.leases"` — 공유기(OpenWrt)에서 VM MAC 주소로 IP 매핑
+- **OpenTofu R2 Backend:** Cloudflare R2 S3-compatible backend 사용. `tofu init` 전 `source ~/git/twenty-four-seven-three-sixty-five/.env`로 AWS 자격 증명 주입 필요. state key: `homelab/dev/terraform.tfstate`
 
 ## File Layout
 
 | 경로 | 역할 |
 | :--- | :--- |
-| `proxmox/opentofu/` | OpenTofu 프로비저닝 (provider, variables, talos.tf, heritage.tf, outputs.tf) |
+| `proxmox/opentofu/` | OpenTofu 프로비저닝 (provider, variables, talos.tf, heritage.tf, outputs.tf, backend.tf) |
+| `proxmox/opentofu/backend.tf` | Cloudflare R2 S3-compatible backend (state 저장소, key: `homelab/dev/terraform.tfstate`) |
 | `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북 |
 | `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, talos) |
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve 설정 (443→8006) |
-| `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, gatus, aria2) |
+| `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, aria2) |
 | `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스) |
 | `heritage/traefik/` | Traefik L7 리버스 프록시 설정 (static + dynamic YAML) |
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
@@ -147,7 +146,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요
 - **Heritage LXC:** `/dev/net/tun` 디바이스 패스스루 + `keyctl=true` 필요 (Tailscale용). `heritage.tf`에 이미 설정됨
 - **Heritage 외부 접속:** `heritage.bun-bull.ts.net` — Tailscale LXC 호스트 설치 + `tailscale serve`로 path-based 라우팅 (Caddy 불필요)
-- **Traefik 라우팅:** Tailscale Serve(443→9080) → Traefik → 서비스. Gatus는 SPA subpath 미지원으로 Traefik 라우팅 제외, `:8088` 직접 접속
+- **Traefik 라우팅:** Tailscale Serve(443→9080) → Traefik → 서비스. Homepage(`/`), Transmission(`/transmission`), Jellyfin(`/jellyfin`) path-based 라우팅
 - **Tailscale Serve HTTPS 백엔드:** 자가 서명 인증서 백엔드는 `https+insecure://` 스킴 사용 필요 (일반 `https://`는 502 에러)
 - **Proxmox 초기 설정:** 재설치 후 enterprise repo 비활성화 필요 (`pve-enterprise.sources` → `.disabled`). no-subscription repo는 trixie(PVE 9) 사용: `deb http://download.proxmox.com/debian/pve trixie pve-no-subscription`
 - **LXC 템플릿:** `pveam update && pveam download local <template-name>` — Proxmox에서 LXC용 OS 템플릿 다운로드. `pveam available --section system`으로 목록 확인

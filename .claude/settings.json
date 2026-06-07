@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '$CLAUDE_FILE_PATH' | grep -qE '(\\.env|\\.sops|secrets\\.sops)' && echo 'BLOCK: sops/환경변수 파일은 직접 수정하지 마세요. sops -e/-d 사용' && exit 1 || exit 0"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '$CLAUDE_FILE_PATH' | grep -qE '\\.tf$' && cd /Users/crong/git/homelab/proxmox/opentofu && source /Users/crong/git/twenty-four-seven-three-sixty-five/.env 2>/dev/null && tofu validate 2>&1 || true"
+          }
+        ]
+      }
+    ]
+  }
+}
