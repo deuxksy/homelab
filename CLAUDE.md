@@ -36,7 +36,7 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | Beszel | `https://heritage.bun-bull.ts.net/beszel` | HW 모니터링 |
 | Gatus | `http://heritage.bun-bull.ts.net:8088` | SPA subpath 미지원, 직접 접속 |
 | Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
-| Aria2 RPC | `ws://<heritage-ip>:6800/jsonrpc` | 다운로드 매니저, RPC 클라이언트로 접속 |
+| Aria2 RPC | `ws://heritage.bun-bull.ts.net:6800/jsonrpc` | 다운로드 매니저, RPC Secret: P3TERX |
 | K8s API | `https://192.168.221.172:6443` | 내부망만 |
 
 ## Full Provisioning Workflow
@@ -102,12 +102,6 @@ ssh crong@walle.bun-bull.ts.net "chown -R 101000:101000 /mnt/data1/torrent/ /mnt
 TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 reboot
 TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 service kubelet restart
 
-# Aria2 로그 확인
-ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 aria2"
-
-# Aria2 재시작
-ssh heritage "cd /opt/heritage && docker compose restart aria2"
-
 # Proxmox VM/LXC 상태
 ssh root@walle.bun-bull.ts.net "qm list; pct list"
 ```
@@ -131,7 +125,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 | `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, talos) |
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve 설정 (443→8006) |
 | `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, gatus, aria2) |
-| `heritage/.env` | 환경변수 (ARIA2_RPC_SECRET 포함) |
+| `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스) |
 | `heritage/traefik/` | Traefik L7 리버스 프록시 설정 (static + dynamic YAML) |
 | `k8s/talconfig.yaml` | talhelper 클러스터 설정 |
 | `k8s/talsecret.yaml` | 클러스터 시크릿 (gitignore, 분실 시 재부트스트랩 필요) |
@@ -160,6 +154,9 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **Talos 메모리:** master 최소 4GB 권장 (Talos 권장 3946 MiB). 1.5GB에서 scheduler CrashLoopBackOff + CoreDNS Pending 발생
 - **talhelper 버전:** v3.1.10은 Talos v1.10.x만 지원. v1.11+ 필요시 `talosctl gen config` 직접 사용 또는 talhelper 업그레이드 대기
 - **talsecret.yaml:** `talhelper gensecret > talsecret.yaml`로 최초 생성. 분실 시 클러스터 재부트스트랩 필요 (기존 인증서와 불일치)
+- **Aria2 RPC Secret:** `RPC_SECRET` 미설정 시 이미지 기본값 `P3TERX` 사용. RPC 클라이언트 연결 시 필요
+- **Aria2 이미지:** `p3terx/aria2-pro:test` 사용 (latest 4년 전, `:test` 태그가 daily build)
+- **Homepage aria2 위젯:** 미지원 ([#1280](https://github.com/gethomepage/homepage/discussions/1280)). 컨테이너 상태 카드만 가능
 
 ## MCP Servers
 
