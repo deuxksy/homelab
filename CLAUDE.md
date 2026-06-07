@@ -153,6 +153,9 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **Heritage LXC:** `/dev/net/tun` 디바이스 패스스루 + `keyctl=true` 필요 (Tailscale용). `heritage.tf`에 이미 설정됨
 - **Heritage 외부 접속:** `heritage.bun-bull.ts.net` — Tailscale LXC 호스트 설치 + `tailscale serve`로 path-based 라우팅 (Caddy 사용)
 - **Caddy 라우팅:** Tailscale Serve(443→9080) → Caddy → 서비스. Homepage(`/`), Transmission(`/transmission`), Jellyfin(`/jellyfin`) path-based 라우팅
+- **Caddyfile 포맷:** `caddy fmt --overwrite` 실행 필요 (경고 있음, 작동 영향 없음)
+- **Ansible orphan container:** `docker compose up --remove-orphans`로 정리 가능
+- **롤백 방법:** `git checkout HEAD~N` — commit count 기반 (HEAD~8, HEAD~7)
 - **Tailscale Serve HTTPS 백엔드:** 자가 서명 인증서 백엔드는 `https+insecure://` 스킴 사용 필요 (일반 `https://`는 502 에러)
 - **Proxmox 초기 설정:** 재설치 후 enterprise repo 비활성화 필요 (`pve-enterprise.sources` → `.disabled`). no-subscription repo는 trixie(PVE 9) 사용: `deb http://download.proxmox.com/debian/pve trixie pve-no-subscription`
 - **LXC 템플릿:** `pveam update && pveam download local <template-name>` — Proxmox에서 LXC용 OS 템플릿 다운로드. `pveam available --section system`으로 목록 확인
