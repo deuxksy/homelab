@@ -74,6 +74,9 @@ sops -e plain.yaml > secrets.sops.yaml # 암호화
 
 # 템플릿 재생성 (walle에서)
 ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
+
+# ProxmoxMCP-Plus config schema 검증 (config.json 변경 후)
+uv run --with proxmox-mcp-plus python3 -c "from proxmox_mcp.config.loader import load_config; load_config('/home/deck/.config/proxmox-mcp/config.json')" && echo "CONFIG VALID"
 ```
 
 ## Day-to-Day Operations
