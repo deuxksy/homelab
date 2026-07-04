@@ -1,26 +1,12 @@
 {
   "mcpServers": {
-    "k8sgpt": {
-      "command": "/opt/homebrew/bin/k8sgpt",
-      "args": ["serve", "--mcp", "--port", "0", "--metrics-port", "0"],
-      "env": {
-        "KUBECONFIG": "/Users/crong/.kube/homelab.config"
-      }
-    },
-    "proxmox": {
-      "command": "/Users/crong/.local/bin/proxmox-mcp-plus",
-      "env": {
-        "PROXMOX_MCP_CONFIG": "/Users/crong/.config/proxmox-mcp/config.json"
-      }
-    },
-    "github": {
-      "command": "npx",
+    "proxmox-mcp-plus": {
+      "command": "uvx",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
+        "proxmox-mcp-plus"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+        "PROXMOX_MCP_CONFIG": "/home/deck/.config/proxmox-mcp/config.json"
       }
     }
   }
