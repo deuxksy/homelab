@@ -142,7 +142,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 
 ## Gotchas
 
-- **Bash CWD:** `cd proxmox/ansible && ...` 실행 후 CWD가 변경됨. 후속 git 명령어는 반드시 절대 경로 또는 `cd /Users/crong/git/homelab &&` 선행 필요
+- **Bash CWD:** `cd proxmox/ansible && ...` 실행 후 CWD가 변경됨. 후속 git 명령어는 반드시 절대 경로 또는 `cd /home/deck/git/homelab &&` 선행 필요
 - **Heritage LXC UID 매핑:** LXC 200은 unprivileged → 컨테이너 UID N → 호스트 UID 100000+N 매핑. 현재 crong 사용자 UID 101000은 컨테이너 내 UID 1000으로 매핑됨
 - **Transmission/Jellyfin 권한:** 호스트 `/mnt/data{1,2}/torrent/`는 UID 101000:101000 소유(권한 700). Transmission(PUID=1000)과 Jellyfin(user:1000:1000)이 동일 UID 사용
 - **Proxmox HTTP 검증:** `curl -sI`(HEAD)는 501 반환. GET으로 검증: `curl -s -o /dev/null -w "%{http_code}" https://walle.bun-bull.ts.net`
@@ -172,9 +172,8 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 
 | 서버 | 상태 | 비고 |
 | :--- | :--- | :--- |
-| proxmox | 활성 | `proxmox-mcp-plus` (uv), 설정: `~/.config/proxmox-mcp/config.json` |
-| k8sgpt | 활성 | `/opt/homebrew/bin/k8sgpt` v0.4.33, KUBECONFIG: `~/.kube/homelab.config` |
+| proxmox-mcp-plus | 활성 | `uvx proxmox-mcp-plus`, 설정: `/home/deck/.config/proxmox-mcp/config.json` (권한 600, git 미추적) |
 
-- **Proxmox MCP 설정:** `~/.config/proxmox-mcp/config.json` — host, API token, `verify_ssl=false` + `dev_mode=true` (자가 서명 인증서)
-- **K8sgpt 활성화:** KUBECONFIG `~/.kube/homelab.config` 설정 완료. Talos 재부트스트랩 시: `cd k8s && TALOSCONFIG=clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 kubeconfig ~/.kube/homelab.config --force`
+- **Proxmox MCP 설정:** `/home/deck/.config/proxmox-mcp/config.json` (권한 600) — `verify_ssl=false` + `dev_mode=true` (자가 서명 인증서 허용 조건), `ssh.user=crong` + `use_sudo=true` (NOPASSWD), `command_policy.mode=deny_all` (SSH exec 도구 비활성, API 도구만 사용). 토큰은 `proxmox/opentofu/secrets.sops.yaml`의 `proxmox_api_token`에서 sops 복호화 후 주입
+- **K8s 접근:** KUBECONFIG `~/.kube/homelab.config` 설정 완료. Talos 재부트스트랩 시: `cd k8s && TALOSCONFIG=clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 kubeconfig ~/.kube/homelab.config --force`
 - **Heritage 사용자:** crong(UID 101000)는 LXC 200 내에서 UID 1000으로 매핑됨. 호스트에서 파일 관리 시 `chown 101000:101000` 사용
