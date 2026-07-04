@@ -39,7 +39,7 @@ config.json은 OS 로컬 파일이므로 sops 암호화 불필요. 권한 600으
 | auth | user | `root@pam` | 토큰에서 분해 |
 | auth | token_name | `<secrets>` | `secrets.sops.yaml` 복호화 |
 | auth | token_value | `<secrets>` | `secrets.sops.yaml` 복호화 |
-| security | dev_mode | `true` | 자가 서명 + approval 토큰 비활성화 |
+| security | dev_mode | `true` | `verify_ssl=false` 허용 조건 (ProxmoxMCP-Plus schema상 dev_mode=true여야 자가 서명 인증서 사용 가능) |
 | logging | level | `INFO` | 운영 기본(원본 DEBUG) |
 | mcp | transport | STDIO | 유지 |
 | command_policy | mode | `deny_all` | 보안 기본값 유지 |
