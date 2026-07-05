@@ -1,17 +1,52 @@
 ---
-# Tailscale Serve (443 → https+insecure://localhost:9090)
-# design B3: 백엔드 스킴 https+insecure (Cockpit 자가서명 TLS)
-# idempotency: walle.yml 패턴 (status 확인 후 변경 시만)
+# Tailscale Serve 다중 포트 매핑
+# 443 → Cockpit (https+insecure, 자가서명 TLS)
+# 8443 → PatchMon (http, Docker loopback)
 
-- name: Tailscale Serve 상태 확인
-  ansible.builtin.command: tailscale serve status
+- name: Tailscale Serve 상태 확인 (JSON, R-AGY2)
+  ansible.builtin.command: tailscale serve status --json
   register: ts_serve_status
   changed_when: false
-  failed_when: false
 
-- name: Tailscale Serve 구성 (443 → https+insecure://localhost:9090)
+- name: 현재 Serve 매핑 파싱
+  ansible.builtin.set_fact:
+    ts_current_serve: "{{ ts_serve_status.stdout | from_json }}"
+  when: ts_serve_status.stdout | length > 0
+
+- name: Serve 재구성 필요 여부 (Cockpit만)
+  ansible.builtin.set_fact:
+    serve_needs_reconfig: >-
+      {{
+        ts_current_serve.Web is not defined
+        or ts_current_serve.Web['443'] is not defined
+        or (ts_current_serve.Web['8443'] is defined and cockpit_patchmon_enabled | bool == false)
+      }}
+
+- name: Serve 재구성 필요 여부 (Cockpit + PatchMon)
+  ansible.builtin.set_fact:
+    serve_needs_reconfig: >-
+      {{
+        ts_current_serve.Web is not defined
+        or ts_current_serve.Web['443'] is not defined
+        or ts_current_serve.Web['8443'] is not defined
+      }}
+  when: cockpit_patchmon_enabled | bool
+
+- name: Tailscale Serve 구성 (Cockpit만 — PatchMon 비활성화)
   ansible.builtin.shell: |
     tailscale serve reset
-    tailscale serve --bg --https=443 --set-path / https+insecure://localhost:9090
-  when: "'https+insecure://localhost:9090' not in ts_serve_status.stdout"
+    tailscale serve --bg --https=443 --set-path / https+insecure://localhost:{{ cockpit_listen_port }}
+  when:
+    - serve_needs_reconfig | bool
+    - not (cockpit_patchmon_enabled | bool)
+  changed_when: true
+
+- name: Tailscale Serve 구성 (Cockpit + PatchMon)
+  ansible.builtin.shell: |
+    tailscale serve reset
+    tailscale serve --bg --https=443 --set-path / https+insecure://localhost:{{ cockpit_listen_port }}
+    tailscale serve --bg --https={{ cockpit_patchmon_serve_port }} --set-path / http://localhost:3000
+  when:
+    - serve_needs_reconfig | bool
+    - cockpit_patchmon_enabled | bool
   changed_when: true
