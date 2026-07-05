@@ -1,0 +1,6 @@
+---
+- name: Deploy Cockpit
+  hosts: cockpit_hosts
+  become: true
+  roles:
+    - role: cockpit

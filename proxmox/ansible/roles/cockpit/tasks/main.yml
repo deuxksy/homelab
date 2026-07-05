@@ -1,0 +1,55 @@
+---
+- name: cockpit 패키지 설치
+  ansible.builtin.apt:
+    name: cockpit
+    state: present
+    update_cache: true
+
+- name: cockpit socket override 디렉토리
+  ansible.builtin.file:
+    path: /etc/systemd/system/cockpit.socket.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: cockpit socket loopback override
+  ansible.builtin.template:
+    src: cockpit-socket-override.conf.j2
+    dest: /etc/systemd/system/cockpit.socket.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+  when: cockpit_bind_loopback_only | bool
+
+- name: cockpit.socket 활성화
+  ansible.builtin.systemd:
+    name: cockpit.socket
+    state: started
+    enabled: true
+    daemon_reload: true
+
+# 방화벽 (cockpit_manage_firewall이 true일 때만)
+- name: UFW — 9090 외부 인터페이스 deny (loopback은 systemd socket에서 제한)
+  community.general.ufw:
+    rule: deny
+    port: "{{ cockpit_listen_port }}"
+    proto: tcp
+  when: cockpit_manage_firewall | bool
+
+- name: UFW — Tailscale 인터페이스만 443 허용 (Serve)
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+    interface: tailscale0
+  when:
+    - cockpit_manage_firewall | bool
+    - cockpit_tailscale_serve | bool
+
+# 하위 task import — Task 8/9에서 auth.yml, tailscale_join.yml, tailscale_serve.yml 생성 후 추가
+# - ansible.builtin.import_tasks: auth.yml
+# - ansible.builtin.import_tasks: tailscale_join.yml
+# - ansible.builtin.import_tasks: tailscale_serve.yml
+#   when: cockpit_tailscale_serve | bool

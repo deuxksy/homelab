@@ -1,0 +1,7 @@
+---
+cockpit_listen_port: 9090
+cockpit_bind_loopback_only: true
+cockpit_admin_user: cockpit-admin
+cockpit_tailscale_serve: true       # homelab: true, 회사 서버: false
+cockpit_reverse_proxy: false        # 회사 서버 기존 reverse proxy 사용 시 true
+cockpit_manage_firewall: true       # 회사 서버 기존 방화벽 존중 시 false
