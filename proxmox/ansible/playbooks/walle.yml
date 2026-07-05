@@ -17,3 +17,33 @@
           tailscale serve --bg --set-path / https+insecure://127.0.0.1:8006
       when: "'https+insecure://127.0.0.1:8006' not in ts_serve_status.stdout"
       changed_when: true
+
+    # PVE post-install: disable PVE enterprise repo, enable no-subscription, hide nag
+    # Ceph repo는 Web UI Ceph 설치 마법사가 자동 관리 (no-subscription 추가) — 건드리지 않음
+    - name: Disable Proxmox Enterprise repository
+      ansible.builtin.command: mv pve-enterprise.sources pve-enterprise.sources.disabled
+      args:
+        chdir: /etc/apt/sources.list.d
+        removes: /etc/apt/sources.list.d/pve-enterprise.sources
+
+    - name: Configure Proxmox no-subscription repository
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/pve-no-subscription.list
+        content: "deb http://download.proxmox.com/debian/pve trixie pve-no-subscription\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Disable no-subscription nag dialog
+      ansible.builtin.replace:
+        path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+        regexp: "res.data.status.toLowerCase() !== 'active'"
+        replace: 'false'
+        backup: true
+      notify: Restart pveproxy
+
+  handlers:
+    - name: Restart pveproxy
+      ansible.builtin.systemd:
+        name: pveproxy
+        state: restarted

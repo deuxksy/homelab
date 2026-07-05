@@ -118,7 +118,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **Talos VM:** QEMU guest agent 미지원 → `started = false`로 생성 후 수동 시작. 설치 후 반드시 `qm set <ID> --boot order=scsi0`로 디스크 부팅 전환 (Gotchas 참조)
 - **Endpoint:** `walle.bun-bull.ts.net:8006` (Tailscale). `walle.bun-bull.ts.net` (443, Tailscale Serve). `insecure = true` 필요 (자가 서명 인증서)
 - **Secrets:** `proxmox/opentofu/secrets.sops.yaml` — age 키로 sops 암호화. API Token 형식: `root@pam!<token-name>=<secret>`
-- **SSH:** `ssh root@walle.bun-bull.ts.net` (root 접속). SSH config의 `Host walle`은 user=crong이라 root 명령어 불가
+- **SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, passwordless sudo). **root SSH는 키 미등록으로 불가** — Ansible inventory도 `ansible_user=crong ansible_become=true`. Day-to-Day Operations의 `ssh root@walle` 예시는 사전에 `sudo` 붙여 crong으로 실행
 - **Heritage SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, sudo 권한 포함). 파일 시스템 관리용 사용자
 - **DHCP IP 조회:** `ssh arv "cat /tmp/dhcp.leases"` — 공유기(OpenWrt)에서 VM MAC 주소로 IP 매핑
 - **OpenTofu R2 Backend:** Cloudflare R2 S3-compatible backend 사용. `tofu init` 전 `source ~/git/twenty-four-seven-three-sixty-five/.env`로 AWS 자격 증명 주입 필요. state key: `homelab/dev/terraform.tfstate`
@@ -131,7 +131,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 | `proxmox/opentofu/backend.tf` | Cloudflare R2 S3-compatible backend (state 저장소, key: `homelab/dev/terraform.tfstate`) |
 | `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북 |
 | `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, talos) |
-| `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve 설정 (443→8006) |
+| `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve (443→8006) + PVE post-install (enterprise repo 비활성화, no-subscription repo, 알림 숨김) |
 | `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, aria2) |
 | `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스) |
 | `heritage/caddy/` | Caddy L7 리버스 프록시 설정 (Caddyfile) |
@@ -164,7 +164,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **Ansible orphan container:** `docker compose up --remove-orphans`로 정리 가능
 - **롤백 방법:** `git checkout HEAD~N` — commit count 기반 (HEAD~8, HEAD~7)
 - **Tailscale Serve HTTPS 백엔드:** 자가 서명 인증서 백엔드는 `https+insecure://` 스킴 사용 필요 (일반 `https://`는 502 에러)
-- **Proxmox 초기 설정:** 재설치 후 enterprise repo 비활성화 필요 (`pve-enterprise.sources` → `.disabled`). no-subscription repo는 trixie(PVE 9) 사용: `deb http://download.proxmox.com/debian/pve trixie pve-no-subscription`
+- **Proxmox no-subscription 설정:** 재설치 후 enterprise repo 비활성화 + no-subscription repo 전환 (trixie). `walle.yml`이 idempotent로 자동화. 로그인 알림 숨김은 `proxmoxlib.js`의 `res.data.status.toLowerCase() !== 'active'` → `false` 치환 (2곳, pveproxy 재시작). **Ceph repo는 Web UI Ceph 설치 마법사가 no-subscription으로 자동 추가** — Ansible이 건드리지 않음
 - **LXC 템플릿:** `pveam update && pveam download local <template-name>` — Proxmox에서 LXC용 OS 템플릿 다운로드. `pveam available --section system`으로 목록 확인
 - **Talos 메모리:** master 최소 4GB 권장 (Talos 권장 3946 MiB). 1.5GB에서 scheduler CrashLoopBackOff + CoreDNS Pending 발생
 - **talhelper 버전:** v3.1.10은 Talos v1.10.x만 지원. v1.11+ 필요시 `talosctl gen config` 직접 사용 또는 talhelper 업그레이드 대기
