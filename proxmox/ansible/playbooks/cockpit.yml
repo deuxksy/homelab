@@ -10,10 +10,12 @@
       delegate_to: localhost
       become: false
       changed_when: false
+      no_log: true
 
     - name: cockpit secrets fact 설정
       ansible.builtin.set_fact:
         cockpit_admin_password: "{{ (cockpit_sops.stdout | from_yaml).cockpit_admin_password }}"
         tailscale_auth_key: "{{ (cockpit_sops.stdout | from_yaml).tailscale_auth_key }}"
+      no_log: true
   roles:
     - role: cockpit
