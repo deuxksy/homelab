@@ -1,0 +1,40 @@
+---
+# Docker Engine 설치 (heritage.yml 패턴 재사용)
+# PatchMon Compose 배포 전제 조건
+
+- name: Docker GPG 키 디렉토리
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Docker GPG 키 다운로드
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Docker apt repository 추가
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }}
+      signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu
+      {{ ansible_distribution_release }} stable
+    state: present
+    update_cache: true
+
+- name: Docker 패키지 설치
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: Docker 서비스 활성화
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
