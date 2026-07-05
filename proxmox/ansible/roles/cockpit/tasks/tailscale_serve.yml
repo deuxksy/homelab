@@ -2,33 +2,42 @@
 # Tailscale Serve 다중 포트 매핑
 # 443 → Cockpit (https+insecure, 자가서명 TLS)
 # 8443 → PatchMon (http, Docker loopback)
+# idempotency: tailscale serve status --json의 TCP 키로 포트 존재 확인
 
 - name: Tailscale Serve 상태 확인 (JSON, R-AGY2)
   ansible.builtin.command: tailscale serve status --json
   register: ts_serve_status
   changed_when: false
+  failed_when: false
 
 - name: 현재 Serve 매핑 파싱
   ansible.builtin.set_fact:
     ts_current_serve: "{{ ts_serve_status.stdout | from_json }}"
   when: ts_serve_status.stdout | length > 0
 
+- name: ts_current_serve 기본값 (빈 stdout 대비)
+  ansible.builtin.set_fact:
+    ts_current_serve: {}
+  when: ts_serve_status.stdout | length == 0
+
+# 실제 JSON 스키마: { "TCP": { "443": {...}, "8443": {...} }, "Web": { "host:port": {...} } }
+# TCP 키가 HTTPS 매핑 포트를 직접 가리키므로 포트 존재 확인에 사용
 - name: Serve 재구성 필요 여부 (Cockpit만)
   ansible.builtin.set_fact:
     serve_needs_reconfig: >-
       {{
-        ts_current_serve.Web is not defined
-        or ts_current_serve.Web['443'] is not defined
-        or (ts_current_serve.Web['8443'] is defined and cockpit_patchmon_enabled | bool == false)
+        ts_current_serve.TCP is not defined
+        or ts_current_serve.TCP['443'] is not defined
+        or (ts_current_serve.TCP['8443'] is defined and not (cockpit_patchmon_enabled | bool))
       }}
 
 - name: Serve 재구성 필요 여부 (Cockpit + PatchMon)
   ansible.builtin.set_fact:
     serve_needs_reconfig: >-
       {{
-        ts_current_serve.Web is not defined
-        or ts_current_serve.Web['443'] is not defined
-        or ts_current_serve.Web['8443'] is not defined
+        ts_current_serve.TCP is not defined
+        or ts_current_serve.TCP['443'] is not defined
+        or ts_current_serve.TCP['8443'] is not defined
       }}
   when: cockpit_patchmon_enabled | bool
 
