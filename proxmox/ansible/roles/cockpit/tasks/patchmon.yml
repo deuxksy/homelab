@@ -1,0 +1,41 @@
+---
+# PatchMon Compose 배포
+# 의존성: docker.yml(Docker Engine), playbook patchmon_* facts
+
+- name: PatchMon 배포 디렉토리
+  ansible.builtin.file:
+    path: "{{ cockpit_patchmon_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: docker-compose.yml 배포
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ cockpit_patchmon_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: ".env 배포 (R-AGY1: 0600/root)"
+  ansible.builtin.template:
+    src: patchmon.env.j2
+    dest: "{{ cockpit_patchmon_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: PatchMon Compose 기동 (healthcheck 대기)
+  community.docker.docker_compose_v2:
+    project_src: "{{ cockpit_patchmon_dir }}"
+    state: present
+    wait: true
+  register: patchmon_compose
+
+- name: PatchMon 컨테이너 상태 확인
+  ansible.builtin.assert:
+    that:
+      - patchmon_compose.containers | length == 4
+    fail_msg: "PatchMon 컨테이너 4개(server/database/redis/guacd) 기동 실패"
