@@ -19,8 +19,9 @@ output "cockpit_vm_id" {
 }
 
 output "cockpit_ipv4" {
-  value       = proxmox_virtual_environment_vm.cockpit.ipv4_addresses[1][0]
-  description = "cockpit VM IPv4 (agent 기반, eth0)"
+  # agent IP 수집 전/실패 시 null — DHCP IP는 hosts.ini/talconfig와 동일하게 수동 조회 fallback
+  value       = try(proxmox_virtual_environment_vm.cockpit.ipv4_addresses[1][0], null)
+  description = "cockpit VM IPv4 (agent 기반, eth0) — agent 수집 전 null"
 }
 
 output "cockpit_mac" {
