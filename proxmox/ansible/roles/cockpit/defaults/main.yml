@@ -5,3 +5,10 @@ cockpit_admin_user: cockpit-admin
 cockpit_tailscale_serve: true       # homelab: true, 회사 서버: false
 cockpit_reverse_proxy: false        # 회사 서버 기존 reverse proxy 사용 시 true
 cockpit_manage_firewall: true       # 회사 서버 기존 방화벽 존중 시 false
+
+# === PatchMon ===
+cockpit_patchmon_enabled: true        # false면 Docker/Patchmon 전체 스킵
+cockpit_patchmon_dir: /opt/patchmon
+cockpit_patchmon_version: latest      # 회사 서버에서는 버전 핀 권장
+cockpit_patchmon_cors_origin: "https://cockpit.bun-bull.ts.net:8443"
+cockpit_patchmon_serve_port: 8443     # Tailscale Serve HTTPS 포트 (허용: 443/8443/10000)
