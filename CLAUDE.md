@@ -43,7 +43,7 @@ cd proxmox/opentofu && tofu apply -auto-approve
 tofu output  # MAC 주소 확인
 
 # 2. VM 시작 + boot order 수정 (CDROM 우선)
-ssh root@walle.bun-bull.ts.net "qm set 100 --boot order=ide2; qm set 101 --boot order=ide2; qm start 100; qm start 101"
+ssh crong@walle.bun-bull.ts.net "sudo qm set 100 --boot order=ide2; sudo qm set 101 --boot order=ide2; sudo qm start 100; sudo qm start 101"
 
 # 3. DHCP IP 확인 → hosts.ini, talconfig.yaml 갱신
 ssh arv "cat /tmp/dhcp.leases" | grep "<MAC>"
@@ -73,7 +73,7 @@ sops -d secrets.sops.yaml              # 복호화 (평문 출력)
 sops -e plain.yaml > secrets.sops.yaml # 암호화
 
 # 템플릿 재생성 (walle에서)
-ssh root@walle.bun-bull.ts.net 'bash -s' < scripts/create-talos-template.sh
+ssh crong@walle.bun-bull.ts.net 'sudo bash -s' < scripts/create-talos-template.sh
 
 # ProxmoxMCP-Plus config schema 검증 (config.json 변경 후)
 uv run --with proxmox-mcp-plus python3 -c "from proxmox_mcp.config.loader import load_config; load_config('/home/deck/.config/proxmox-mcp/config.json')" && echo "CONFIG VALID"
@@ -109,7 +109,7 @@ TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 -
 TALOSCONFIG=k8s/clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 service kubelet restart
 
 # Proxmox VM/LXC 상태
-ssh root@walle.bun-bull.ts.net "qm list; pct list"
+ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 ```
 
 ## Key Constraints
@@ -118,7 +118,7 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 - **Talos VM:** QEMU guest agent 미지원 → `started = false`로 생성 후 수동 시작. 설치 후 반드시 `qm set <ID> --boot order=scsi0`로 디스크 부팅 전환 (Gotchas 참조)
 - **Endpoint:** `walle.bun-bull.ts.net:8006` (Tailscale). `walle.bun-bull.ts.net` (443, Tailscale Serve). `insecure = true` 필요 (자가 서명 인증서)
 - **Secrets:** `proxmox/opentofu/secrets.sops.yaml` — age 키로 sops 암호화. API Token 형식: `root@pam!<token-name>=<secret>`
-- **SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, passwordless sudo). **root SSH는 키 미등록으로 불가** — Ansible inventory도 `ansible_user=crong ansible_become=true`. Day-to-Day Operations의 `ssh root@walle` 예시는 사전에 `sudo` 붙여 crong으로 실행
+- **SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, passwordless sudo). **root SSH는 키 미등록으로 불가** — Ansible inventory도 `ansible_user=crong ansible_become=true`. qm/pct/스크립트 실행 모두 이 계정 + sudo
 - **Heritage SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, sudo 권한 포함). 파일 시스템 관리용 사용자
 - **DHCP IP 조회:** `ssh arv "cat /tmp/dhcp.leases"` — 공유기(OpenWrt)에서 VM MAC 주소로 IP 매핑
 - **OpenTofu R2 Backend:** Cloudflare R2 S3-compatible backend 사용. `tofu init` 전 `source ~/git/twenty-four-seven-three-sixty-five/.env`로 AWS 자격 증명 주입 필요. state key: `homelab/dev/terraform.tfstate`
