@@ -10,8 +10,9 @@ Homelab IaC for walle (Proxmox VE 9.2) — OpenTofu로 VM/LXC 프로비저닝, A
 
 ```
 walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
-├── VM 102: cockpit (Ubuntu 24.04 LTS, Cockpit + Tailscale Serve)
-│   └── Cockpit (systemd socket, :9090 loopback only)
+├── VM 102: cockpit (Ubuntu 24.04 LTS, Cockpit + PatchMon + Tailscale Serve)
+│   ├── Cockpit (systemd socket, :9090 loopback only)
+│   └── PatchMon (Docker Compose 4컨테이너, :3000 loopback only)
 ├── LXC 200: heritage (Debian 12, Docker + Tailscale Serve)
 │   ├── Caddy (L7 reverse proxy, port 9080)
 │   ├── Homepage (dashboard)
@@ -36,6 +37,7 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | Transmission | `https://heritage.bun-bull.ts.net/transmission` | 토렌트 |
 | Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
 | Cockpit | `https://cockpit.bun-bull.ts.net` | Tailscale Serve(443→https+insecure://localhost:9090) |
+| PatchMon | `https://cockpit.bun-bull.ts.net:8443` | 패치 모니터링, Tailscale Serve(8443→http://localhost:3000) |
 | Aria2 RPC | `ws://heritage.bun-bull.ts.net:6800/jsonrpc` | 다운로드 매니저, RPC Secret: P3TERX |
 
 ## Full Provisioning Workflow
@@ -110,6 +112,13 @@ ssh crong@cockpit "sudo systemctl restart cockpit.socket; sudo systemctl status 
 # Cockpit 로그 확인
 ssh crong@cockpit "sudo journalctl -u cockpit -f --tail=50"
 
+# PatchMon 서비스 재시작 / 상태 (cockpit VM 102)
+ssh crong@cockpit "cd /opt/patchmon && sudo docker compose restart server"
+ssh crong@cockpit "cd /opt/patchmon && sudo docker compose ps"
+
+# PatchMon 로그 확인
+ssh crong@cockpit "cd /opt/patchmon && sudo docker compose logs -f --tail=50 server"
+
 # Tailscale Serve 상태 확인 (cockpit/heritage)
 ssh crong@cockpit "tailscale serve status"
 ssh heritage "tailscale serve status"
@@ -138,9 +147,13 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 | `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북, roles |
 | `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, cockpit_hosts) |
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve (443→8006) + PVE post-install (enterprise repo 비활성화, no-subscription repo, 알림 숨김) |
-| `proxmox/ansible/playbooks/cockpit.yml` | Cockpit 배포 (cockpit_hosts, become, role cockpit) |
-| `proxmox/ansible/roles/cockpit/` | Cockpit role (defaults, handlers, tasks, templates) — 패키지, socket loopback, UFW |
-| `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (cockpit_admin_password, tailscale_auth_key) |
+| `proxmox/ansible/playbooks/cockpit.yml` | Cockpit + PatchMon 배포 (cockpit_hosts, become, role cockpit) |
+| `proxmox/ansible/roles/cockpit/` | Cockpit role — 패키지, socket loopback, UFW, Docker, PatchMon Compose, Tailscale Serve 다중 포트 |
+| `proxmox/ansible/roles/cockpit/tasks/docker.yml` | Docker CE Engine 설치 (heritage 패턴: GPG key + apt_repository) |
+| `proxmox/ansible/roles/cockpit/tasks/patchmon.yml` | PatchMon Compose 배포 (.env 0600, docker_compose_v2 wait) |
+| `proxmox/ansible/roles/cockpit/templates/docker-compose.yml.j2` | PatchMon Compose 템플릿 (4컨테이너, 127.0.0.1:3000 loopback) |
+| `proxmox/ansible/roles/cockpit/templates/patchmon.env.j2` | PatchMon .env 템플릿 (시크릿 변수 주입) |
+| `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (cockpit_admin_password, tailscale_auth_key, patchmon_* 5키) |
 | `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, aria2) |
 | `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스) |
 | `heritage/caddy/` | Caddy L7 리버스 프록시 설정 (Caddyfile) |
@@ -162,6 +175,11 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Cockpit socket loopback:** `cockpit.socket`을 `/etc/systemd/system/cockpit.socket.d/override.conf`로 `127.0.0.1:9090` 제한. 외부 노출은 Tailscale Serve(443)만
 - **Cockpit Tailscale Serve 스킴:** 백엔드는 `https+insecure://localhost:9090` (Cockpit 자가서명 TLS). 일반 `https://`는 502
 - **Cockpit admin 계정:** Ansible이 동적 생성 (`cockpit-admin`, passworded sudo — NOPASSWD 지양). 비밀번호는 `proxmox/ansible/secrets.sops.yaml`
+- **PatchMon 배포 제어:** `cockpit_patchmon_enabled`(기본 true)로 Docker/PatchMon 전체 on/off. 회사 서버는 false 시 Cockpit만 배포 (재현성)
+- **PatchMon loopback 바인딩:** docker-compose `127.0.0.1:3000:3000` (LAN 노출 금지). 외부 접속은 Tailscale Serve 8443만
+- **PatchMon Tailscale Serve JSON idempotency:** `tailscale serve status --json`의 `TCP['443']`/`TCP['8443']` 키로 재구성 여부 판단. `Web` 키는 `host:port` 형식이라 직접 포트 접근 불가 (2026-07-06 스키마 확인)
+- **PatchMon .env 권한:** `/opt/patchmon/.env`는 mode 0600 owner root (평문 시크릿). Ansible `no_log: true`로 배포 로깅 차단
+- **PatchMon 컬렉션 의존:** `community.docker`(docker_compose_v2) 필요. heritage.yml도 동일 모듈 사용 중
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요
