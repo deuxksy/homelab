@@ -64,7 +64,7 @@ cd proxmox/ansible && ansible-playbook playbooks/heritage.yml
 
 ```bash
 # OpenTofu 초기화 및 검증 (R2 자격 증명 필요)
-source ~/git/twenty-four-seven-three-sixty-five/.env
+# 주의: 실행 전 반드시 `source ~/git/twenty-four-seven-three-sixty-five/.env` 실행 필요
 cd proxmox/opentofu && tofu init
 tofu validate
 
@@ -146,6 +146,10 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 ## Gotchas
 
 - **Bash CWD:** `cd proxmox/ansible && ...` 실행 후 CWD가 변경됨. 후속 git 명령어는 반드시 절대 경로 또는 `cd /home/deck/git/homelab &&` 선행 필요
+- **Ansible hosts.ini IP:** `inventory/hosts.ini`의 IP는 현재 하드코딩되어 있음. VM 재생성 후 DHCP IP가 변경되면 반드시 갱신 필요
+- **Homepage 보안:** 기본 설정으로 `/:/host:ro`와 `/var/run/docker.sock` 마운트가 활성화되어 있음. 보안 강화를 위해 주석 처리 필요
+- **Aria2 RPC 시크릿:** `RPC_SECRET` 환경변수가 주석 처리되어 있을 경우 기본값 `P3TERX` 사용. 포트 6800이 직접 노출되므로 반드시 설정 필요
+- **Memory Consolidation:** 세션 시작 시 자동으로 memory consolidation이 백그라운드에서 실행됨. 완료될 때까지 대용량 검색 작업 지연 권장
 - **Heritage LXC UID 매핑:** LXC 200은 unprivileged → 컨테이너 UID N → 호스트 UID 100000+N 매핑. 현재 crong 사용자 UID 101000은 컨테이너 내 UID 1000으로 매핑됨
 - **Transmission/Jellyfin 권한:** 호스트 `/mnt/data{1,2}/torrent/`는 UID 101000:101000 소유(권한 700). Transmission(PUID=1000)과 Jellyfin(user:1000:1000)이 동일 UID 사용
 - **Proxmox HTTP 검증:** `curl -sI`(HEAD)는 501 반환. GET으로 검증: `curl -s -o /dev/null -w "%{http_code}" https://walle.bun-bull.ts.net`
@@ -176,7 +180,13 @@ ssh root@walle.bun-bull.ts.net "qm list; pct list"
 | 서버 | 상태 | 비고 |
 | :--- | :--- | :--- |
 | proxmox-mcp-plus | 활성 | `uvx proxmox-mcp-plus`, 설정: `/home/deck/.config/proxmox-mcp/config.json` (권한 600, git 미추적) |
+| kubernetes | 활성 | KUBECONFIG `~/.kube/homelab.config` 사용 |
+| serena | 활성 | 코드 심볼 분석 |
+| zai-mcp-server | 활성 | 멀티모달 분석, OCR, UI 비교 |
+| figma | 비활성 | 필요시 활성 |
+| discord | 비활성 | 필요시 활성 |
 
 - **Proxmox MCP 설정:** `/home/deck/.config/proxmox-mcp/config.json` (권한 600) — `verify_ssl=false` + `dev_mode=true` (자가 서명 인증서 허용 조건), `ssh.user=crong` + `use_sudo=true` (NOPASSWD), `command_policy.mode=deny_all` (SSH exec 도구 비활성, API 도구만 사용). 토큰은 `proxmox/opentofu/secrets.sops.yaml`의 `proxmox_api_token`에서 sops 복호화 후 주입
+- **Proxmox MCP 데이터 경로:** `~/.local/state/proxmox-mcp/walle/` (sqlite DB, 로그) — XDG 표준 준수
 - **K8s 접근:** KUBECONFIG `~/.kube/homelab.config` 설정 완료. Talos 재부트스트랩 시: `cd k8s && TALOSCONFIG=clusterconfig/talosconfig talosctl --endpoints 192.168.221.172 --nodes 192.168.221.172 kubeconfig ~/.kube/homelab.config --force`
 - **Heritage 사용자:** crong(UID 101000)는 LXC 200 내에서 UID 1000으로 매핑됨. 호스트에서 파일 관리 시 `chown 101000:101000` 사용

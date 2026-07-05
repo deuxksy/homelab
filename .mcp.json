@@ -8,6 +8,10 @@
       "env": {
         "PROXMOX_MCP_CONFIG": "/home/deck/.config/proxmox-mcp/config.json"
       }
+    },
+    "kubernetes": {
+      "command": "npx",
+      "args": ["-y", "kubernetes-mcp-server@latest"]
     }
   }
 }
