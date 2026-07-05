@@ -1,0 +1,17 @@
+---
+# Tailscale Serve (443 → https+insecure://localhost:9090)
+# design B3: 백엔드 스킴 https+insecure (Cockpit 자가서명 TLS)
+# idempotency: walle.yml 패턴 (status 확인 후 변경 시만)
+
+- name: Tailscale Serve 상태 확인
+  ansible.builtin.command: tailscale serve status
+  register: ts_serve_status
+  changed_when: false
+  failed_when: false
+
+- name: Tailscale Serve 구성 (443 → https+insecure://localhost:9090)
+  ansible.builtin.shell: |
+    tailscale serve reset
+    tailscale serve --bg --https=443 --set-path / https+insecure://localhost:9090
+  when: "'https+insecure://localhost:9090' not in ts_serve_status.stdout"
+  changed_when: true

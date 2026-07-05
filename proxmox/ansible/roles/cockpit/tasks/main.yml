@@ -48,8 +48,10 @@
     - cockpit_manage_firewall | bool
     - cockpit_tailscale_serve | bool
 
-# 하위 task import — Task 8/9에서 auth.yml, tailscale_join.yml, tailscale_serve.yml 생성 후 추가
-# - ansible.builtin.import_tasks: auth.yml
-# - ansible.builtin.import_tasks: tailscale_join.yml
-# - ansible.builtin.import_tasks: tailscale_serve.yml
-#   when: cockpit_tailscale_serve | bool
+# 하위 task
+- ansible.builtin.import_tasks: auth.yml
+
+- ansible.builtin.import_tasks: tailscale_join.yml
+
+- ansible.builtin.import_tasks: tailscale_serve.yml
+  when: cockpit_tailscale_serve | bool

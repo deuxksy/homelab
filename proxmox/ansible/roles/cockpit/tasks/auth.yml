@@ -1,0 +1,28 @@
+---
+# cockpit-admin 계정 (Ansible 동적 생성, design R5)
+# 비밀번호는 proxmox/ansible/secrets.sops.yaml에서 sops lookup
+
+- name: cockpit-admin 계정 생성
+  ansible.builtin.user:
+    name: "{{ cockpit_admin_user }}"
+    password: "{{ (lookup('community.sops.sops', playbook_dir ~ '/../secrets.sops.yaml')['cockpit_admin_password']) | password_hash('sha512') }}"
+    shell: /bin/bash
+    groups: sudo
+    append: true
+
+- name: cockpit-admin sudoers (passworded, NOPASSWD 지양)
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ cockpit_admin_user }}"
+    content: "{{ cockpit_admin_user }} ALL=(ALL) ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -csf %s
+
+- name: SSH 비밀번호 로그인 금지 (키만 허용)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    state: present
+  notify: Restart sshd

@@ -1,0 +1,36 @@
+---
+# Tailscale 조인 (cloud-init에서 이관, heritage 패턴과 일관)
+# auth key는 proxmox/ansible/secrets.sops.yaml에서 sops lookup
+
+- name: Tailscale GPG 키 다운로드 (Ubuntu noble)
+  ansible.builtin.get_url:
+    url: https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
+    dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Tailscale APT 저장소
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main"
+    state: present
+    filename: tailscale
+
+- name: Tailscale 패키지 설치
+  ansible.builtin.apt:
+    name: tailscale
+    state: present
+    update_cache: true
+
+- name: Tailscale 상태 확인 (이미 조인됐는지)
+  ansible.builtin.command: tailscale status
+  register: ts_status
+  changed_when: false
+  failed_when: false
+
+- name: Tailscale up (auth key, 첫 조인 시만)
+  ansible.builtin.command:
+    cmd: "tailscale up --authkey={{ lookup('community.sops.sops', playbook_dir ~ '/../secrets.sops.yaml')['tailscale_auth_key'] }} --hostname=cockpit"
+  register: ts_up
+  when: ts_status.rc != 0
+  changed_when: "'Success' in ts_up.stdout | default('')"
