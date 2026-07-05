@@ -1,6 +1,6 @@
 ---
 # Tailscale 조인 (cloud-init에서 이관, heritage 패턴과 일관)
-# auth key는 proxmox/ansible/secrets.sops.yaml에서 sops lookup
+# auth key는 playbook pre_tasks에서 sops 복호화 후 tailscale_auth_key fact로 주입
 
 - name: Tailscale GPG 키 다운로드 (Ubuntu noble)
   ansible.builtin.get_url:
@@ -30,7 +30,7 @@
 
 - name: Tailscale up (auth key, 첫 조인 시만)
   ansible.builtin.command:
-    cmd: "tailscale up --authkey={{ lookup('community.sops.sops', playbook_dir ~ '/../secrets.sops.yaml')['tailscale_auth_key'] }} --hostname=cockpit"
+    cmd: "tailscale up --authkey={{ tailscale_auth_key }} --hostname=cockpit"
   register: ts_up
   when: ts_status.rc != 0
   changed_when: "'Success' in ts_up.stdout | default('')"

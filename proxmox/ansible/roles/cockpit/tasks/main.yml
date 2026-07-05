@@ -20,7 +20,9 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload systemd
+  notify:
+    - Reload systemd
+    - Restart cockpit.socket
   when: cockpit_bind_loopback_only | bool
 
 - name: cockpit.socket 활성화
@@ -41,6 +43,7 @@
 - name: UFW — Tailscale 인터페이스만 443 허용 (Serve)
   community.general.ufw:
     rule: allow
+    direction: in
     port: "443"
     proto: tcp
     interface: tailscale0

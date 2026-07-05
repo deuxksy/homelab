@@ -2,5 +2,18 @@
 - name: Deploy Cockpit
   hosts: cockpit_hosts
   become: true
+  pre_tasks:
+    - name: sops secrets 복호화 (control node)
+      ansible.builtin.command:
+        cmd: "sops -d {{ playbook_dir }}/../secrets.sops.yaml"
+      register: cockpit_sops
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: cockpit secrets fact 설정
+      ansible.builtin.set_fact:
+        cockpit_admin_password: "{{ (cockpit_sops.stdout | from_yaml).cockpit_admin_password }}"
+        tailscale_auth_key: "{{ (cockpit_sops.stdout | from_yaml).tailscale_auth_key }}"
   roles:
     - role: cockpit

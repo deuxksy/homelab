@@ -1,11 +1,11 @@
 ---
 # cockpit-admin 계정 (Ansible 동적 생성, design R5)
-# 비밀번호는 proxmox/ansible/secrets.sops.yaml에서 sops lookup
+# 비밀번호는 playbook pre_tasks에서 sops 복호화 후 cockpit_admin_password fact로 주입
 
 - name: cockpit-admin 계정 생성
   ansible.builtin.user:
     name: "{{ cockpit_admin_user }}"
-    password: "{{ (lookup('community.sops.sops', playbook_dir ~ '/../secrets.sops.yaml')['cockpit_admin_password']) | password_hash('sha512') }}"
+    password: "{{ cockpit_admin_password | password_hash('sha512') }}"
     shell: /bin/bash
     groups: sudo
     append: true
