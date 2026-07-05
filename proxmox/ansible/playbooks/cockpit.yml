@@ -16,6 +16,11 @@
       ansible.builtin.set_fact:
         cockpit_admin_password: "{{ (cockpit_sops.stdout | from_yaml).cockpit_admin_password }}"
         tailscale_auth_key: "{{ (cockpit_sops.stdout | from_yaml).tailscale_auth_key }}"
+        patchmon_postgres_password: "{{ (cockpit_sops.stdout | from_yaml).patchmon_postgres_password }}"
+        patchmon_redis_password: "{{ (cockpit_sops.stdout | from_yaml).patchmon_redis_password }}"
+        patchmon_jwt_secret: "{{ (cockpit_sops.stdout | from_yaml).patchmon_jwt_secret }}"
+        patchmon_session_secret: "{{ (cockpit_sops.stdout | from_yaml).patchmon_session_secret }}"
+        patchmon_ai_encryption_key: "{{ (cockpit_sops.stdout | from_yaml).patchmon_ai_encryption_key }}"
       no_log: true
   roles:
     - role: cockpit
