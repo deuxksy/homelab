@@ -38,8 +38,14 @@ resource "proxmox_virtual_environment_container" "heritage" {
     keyctl  = true
   }
 
-  # Tailscale용 TUN 디바이스는 pct set --dev0 /dev/net/tun으로 수동 설정 필요
-  # provider v0.106 미지원
+  # Tailscale용 TUN 디바이스 (provider v0.111+ 지원)
+  device_passthrough {
+    path       = "/dev/net/tun"
+    mode       = "0660"
+    uid        = 0
+    gid        = 0
+    deny_write = false
+  }
 
   mount_point {
     volume = "/mnt/data1"
