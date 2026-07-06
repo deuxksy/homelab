@@ -1,0 +1,35 @@
+name: pulse
+
+services:
+  pulse:
+    image: rcourtman/pulse:{{ cockpit_pulse_version }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ cockpit_pulse_internal_port }}:{{ cockpit_pulse_internal_port }}"
+    volumes:
+      - pulse_data:/data
+    mem_limit: 512m
+    cpus: '1.0'
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # B1(Codex): 인증 env vars 사용 안 함 — UI setup wizard로 초기화
+      # PULSE_AUTH_USER/PASS를 넣으면 UI 설정 override + 평문 잔류 발생
+      FRONTEND_PORT: "{{ cockpit_pulse_internal_port }}"
+      PULSE_METRICS_PORT: "9091"
+      PULSE_METRICS_BIND_ADDRESS: "127.0.0.1"
+      # R4(Codex): PULSE_TELEMETRY 미사용 — 공식 문서 미확인, no-op 가능성
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:{{ cockpit_pulse_internal_port }}/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  pulse_data:
