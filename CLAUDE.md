@@ -10,23 +10,24 @@ Homelab IaC for walle (Proxmox VE 9.2) — OpenTofu로 VM/LXC 프로비저닝, A
 
 ```
 walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
-├── VM 102: cockpit (Ubuntu 24.04 LTS, Cockpit + PatchMon + Tailscale Serve)
+├── VM 102: moni (Ubuntu 24.04 LTS, Cockpit + PatchMon + Pulse + Tailscale Serve)
 │   ├── Cockpit (systemd socket, :9090 loopback only)
-│   └── PatchMon (Docker Compose 4컨테이너, :3000 loopback only)
+│   ├── PatchMon (Docker Compose 4컨테이너, :3000 loopback only)
+│   └── Pulse (Docker Compose 1컨테이너, :7655 loopback only)
 ├── LXC 200: heritage (Debian 12, Docker + Tailscale Serve)
 │   ├── Caddy (L7 reverse proxy, port 9080)
 │   ├── Homepage (dashboard)
 │   ├── Transmission (torrent)
 │   ├── Jellyfin (streaming)
 │   └── Aria2 (다운로드 매니저, port 6800)
-└── templates: 900 talos-template (미사용), 901 ubuntu-2404-template (cockpit clone 원본)
+└── templates: 901 ubuntu-2404-template (moni VM clone 원본)
 ```
 
 > K8s 클러스터(talos 100/101)는 2026-07-06 사용자 의도적 삭제됨. `k8s/` 디렉토리(talconfig.yaml)는 잔재.
 
 **프로비저닝 흐름:** OpenTofu → cloud-init(최소) → Ansible
 
-**외부 접속:** `tailscale serve`(443→백엔드)로 Tailscale이 TLS 종료.
+**외부 접속:** `tailscale serve`(9090/8443/10000→백엔드)로 Tailscale이 TLS 종료. 443/80 미사용.
 
 **서비스 접속 URL** (Tailnet 내에서만 접근):
 
@@ -36,8 +37,9 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | Jellyfin | `https://heritage.bun-bull.ts.net/jellyfin` | 스트리밍 |
 | Transmission | `https://heritage.bun-bull.ts.net/transmission` | 토렌트 |
 | Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
-| Cockpit | `https://cockpit.bun-bull.ts.net` | Tailscale Serve(443→https+insecure://localhost:9090) |
-| PatchMon | `https://cockpit.bun-bull.ts.net:8443` | 패치 모니터링, Tailscale Serve(8443→http://localhost:3000) |
+| Cockpit | `https://moni.bun-bull.ts.net:9090` | Tailscale Serve(9090→https+insecure://localhost:9090) |
+| PatchMon | `https://moni.bun-bull.ts.net:8443` | 패치 모니터링, Tailscale Serve(8443→http://localhost:3000) |
+| Pulse | `https://moni.bun-bull.ts.net:10000` | 통합 모니터링, Tailscale Serve(10000→http://localhost:7655) |
 | Aria2 RPC | `ws://heritage.bun-bull.ts.net:6800/jsonrpc` | 다운로드 매니저, RPC Secret: P3TERX |
 
 ## Full Provisioning Workflow
@@ -106,21 +108,28 @@ ssh crong@walle.bun-bull.ts.net "ls -la /mnt/data1/torrent/ /mnt/data2/torrent/"
 # Heritage 파일 소유권 변경 (호스트에서 UID 101000 사용)
 ssh crong@walle.bun-bull.ts.net "chown -R 101000:101000 /mnt/data1/torrent/ /mnt/data2/torrent/"
 
-# Cockpit 서비스 재시작 / 상태
-ssh crong@cockpit "sudo systemctl restart cockpit.socket; sudo systemctl status cockpit.socket"
+# Cockpit 서비스 재시작 / 상태 (VM 102, ubuntu user + proxyjump)
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "sudo systemctl restart cockpit.socket; sudo systemctl status cockpit.socket"
 
 # Cockpit 로그 확인
-ssh crong@cockpit "sudo journalctl -u cockpit -f --tail=50"
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "sudo journalctl -u cockpit -f --tail=50"
 
-# PatchMon 서비스 재시작 / 상태 (cockpit VM 102)
-ssh crong@cockpit "cd /opt/patchmon && sudo docker compose restart server"
-ssh crong@cockpit "cd /opt/patchmon && sudo docker compose ps"
+# PatchMon 서비스 재시작 / 상태 (VM 102)
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/patchmon && sudo docker compose restart server"
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/patchmon && sudo docker compose ps"
 
 # PatchMon 로그 확인
-ssh crong@cockpit "cd /opt/patchmon && sudo docker compose logs -f --tail=50 server"
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/patchmon && sudo docker compose logs -f --tail=50 server"
 
-# Tailscale Serve 상태 확인 (cockpit/heritage)
-ssh crong@cockpit "tailscale serve status"
+# Pulse 서비스 재시작 / 상태 (VM 102)
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/pulse && sudo docker compose restart pulse"
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/pulse && sudo docker compose ps"
+
+# Pulse 로그 확인
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/pulse && sudo docker compose logs -f --tail=50 pulse"
+
+# Tailscale Serve 상태 확인 (moni/heritage)
+ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "tailscale serve status"
 ssh heritage "tailscale serve status"
 
 # Proxmox VM/LXC 상태
@@ -134,6 +143,7 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Endpoint:** `walle.bun-bull.ts.net:8006` (Tailscale). `walle.bun-bull.ts.net` (443, Tailscale Serve). `insecure = true` 필요 (자가 서명 인증서)
 - **Secrets:** `proxmox/opentofu/secrets.sops.yaml` (OpenTofu용), `proxmox/ansible/secrets.sops.yaml` (Ansible용, 분리). age 키로 sops 암호화. API Token 형식: `root@pam!<token-name>=<secret>`
 - **SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, passwordless sudo). **root SSH는 키 미등록으로 불가** — Ansible inventory도 `ansible_user=crong ansible_become=true`. qm/pct/스크립트 실행 모두 이 계정 + sudo
+- **Moni VM SSH:** `ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117` (proxyjump, `ansible_user=ubuntu ansible_become=true`). `crong@moni` 또는 `crong@cockpit` 불가 — ubuntu 계정만 SSH 키 등록됨
 - **Heritage SSH:** `ssh crong@walle.bun-bull.ts.net` (UID 101000, sudo 권한 포함). 파일 시스템 관리용 사용자
 - **DHCP IP 조회:** `ssh arv "cat /tmp/dhcp.leases"` — 공유기(OpenWrt)에서 VM MAC 주소로 IP 매핑
 - **OpenTofu R2 Backend:** Cloudflare R2 S3-compatible backend 사용. `tofu init`/`plan`/`apply` 전 `source /home/deck/git/247365/.env`로 AWS 자격 증명 주입 필요. state key: `homelab/dev/terraform.tfstate`
@@ -147,12 +157,17 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 | `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북, roles |
 | `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, cockpit_hosts) |
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve (443→8006) + PVE post-install (enterprise repo 비활성화, no-subscription repo, 알림 숨김) |
-| `proxmox/ansible/playbooks/cockpit.yml` | Cockpit + PatchMon 배포 (cockpit_hosts, become, role cockpit) |
-| `proxmox/ansible/roles/cockpit/` | Cockpit role — 패키지, socket loopback, UFW, Docker, PatchMon Compose, Tailscale Serve 다중 포트 |
+| `proxmox/ansible/playbooks/cockpit.yml` | Cockpit + PatchMon + Pulse 배포 (cockpit_hosts, become, role cockpit) |
+| `proxmox/ansible/roles/cockpit/` | Cockpit role — 패키지, socket loopback, UFW, Docker, PatchMon/Pulse Compose, Tailscale Serve 다중 포트 |
+| `proxmox/ansible/roles/cockpit/tasks/auth.yml` | cockpit-admin 계정 생성 + sudoers + SSH 키 제한 |
 | `proxmox/ansible/roles/cockpit/tasks/docker.yml` | Docker CE Engine 설치 (heritage 패턴: GPG key + apt_repository) |
 | `proxmox/ansible/roles/cockpit/tasks/patchmon.yml` | PatchMon Compose 배포 (.env 0600, docker_compose_v2 wait) |
+| `proxmox/ansible/roles/cockpit/tasks/pulse.yml` | Pulse Compose 배포 (docker_compose_v2 wait, assert 1 컨테이너) |
+| `proxmox/ansible/roles/cockpit/tasks/tailscale_join.yml` | Tailscale 패키지 설치 + 인증키 조인 |
+| `proxmox/ansible/roles/cockpit/tasks/tailscale_serve.yml` | Tailscale Serve reset 기반 4상태 동적 패턴 (9090/8443/10000, R1/R2) |
 | `proxmox/ansible/roles/cockpit/templates/docker-compose.yml.j2` | PatchMon Compose 템플릿 (4컨테이너, 127.0.0.1:3000 loopback) |
 | `proxmox/ansible/roles/cockpit/templates/patchmon.env.j2` | PatchMon .env 템플릿 (시크릿 변수 주입) |
+| `proxmox/ansible/roles/cockpit/templates/pulse-docker-compose.yml.j2` | Pulse Compose 템플릿 (1컨테이너, 127.0.0.1:7655 loopback) |
 | `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (cockpit_admin_password, tailscale_auth_key, patchmon_* 5키) |
 | `heritage/` | Heritage 미디어 서버 Docker Compose 설정 (compose.yml, homepage, aria2) |
 | `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스) |
@@ -172,14 +187,23 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Heritage LXC UID 매핑:** LXC 200은 unprivileged → 컨테이너 UID N → 호스트 UID 100000+N 매핑. 현재 crong 사용자 UID 101000은 컨테이너 내 UID 1000으로 매핑됨
 - **Transmission/Jellyfin 권한:** 호스트 `/mnt/data{1,2}/torrent/`는 UID 101000:101000 소유(권한 700). Transmission(PUID=1000)과 Jellyfin(user:1000:1000)이 동일 UID 사용
 - **Proxmox HTTP 검증:** `curl -sI`(HEAD)는 501 반환. GET으로 검증: `curl -s -o /dev/null -w "%{http_code}" https://walle.bun-bull.ts.net`
-- **Cockpit socket loopback:** `cockpit.socket`을 `/etc/systemd/system/cockpit.socket.d/override.conf`로 `127.0.0.1:9090` 제한. 외부 노출은 Tailscale Serve(443)만
+- **Cockpit socket loopback:** `cockpit.socket`을 `/etc/systemd/system/cockpit.socket.d/override.conf`로 `127.0.0.1:9090` 제한. 외부 노출은 Tailscale Serve(9090)만
 - **Cockpit Tailscale Serve 스킴:** 백엔드는 `https+insecure://localhost:9090` (Cockpit 자가서명 TLS). 일반 `https://`는 502
 - **Cockpit admin 계정:** Ansible이 동적 생성 (`cockpit-admin`, passworded sudo — NOPASSWD 지양). 비밀번호는 `proxmox/ansible/secrets.sops.yaml`
+- **Cockpit VM SSH:** `ubuntu` 계정 + walle proxyjump (`ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117`). `crong@moni` 불가 (SSH 키 미등록)
+- **Tailscale Serve 포트:** 443/80 미사용. Cockpit=9090, PatchMon=8443, Pulse=10000 (모두 비표준 HTTPS 포트, Tailscale Serve HTTPS는 모든 포트 지원)
+- **Tailscale Serve 4상태 동적 패턴:** reset 기반 재구성 (9090 항상 + 8443/10000 조건부). `serve_required_ports` vs `ts_current_serve.TCP.keys()` 비교로 idempotency 보장
 - **PatchMon 배포 제어:** `cockpit_patchmon_enabled`(기본 true)로 Docker/PatchMon 전체 on/off. 회사 서버는 false 시 Cockpit만 배포 (재현성)
 - **PatchMon loopback 바인딩:** docker-compose `127.0.0.1:3000:3000` (LAN 노출 금지). 외부 접속은 Tailscale Serve 8443만
-- **PatchMon Tailscale Serve JSON idempotency:** `tailscale serve status --json`의 `TCP['443']`/`TCP['8443']` 키로 재구성 여부 판단. `Web` 키는 `host:port` 형식이라 직접 포트 접근 불가 (2026-07-06 스키마 확인)
+- **PatchMon CORS_ORIGIN:** `cockpit_patchmon_cors_origin` 변수 (`https://moni.bun-bull.ts.net:8443`). 노드명/포트 변경 시 동기화 필수
+- **PatchMon Tailscale Serve JSON idempotency:** `tailscale serve status --json`의 `TCP` 키로 재구성 여부 판단 (2026-07-06 스키마 확인)
 - **PatchMon .env 권한:** `/opt/patchmon/.env`는 mode 0600 owner root (평문 시크릿). Ansible `no_log: true`로 배포 로깅 차단
 - **PatchMon 컬렉션 의존:** `community.docker`(docker_compose_v2) 필요. heritage.yml도 동일 모듈 사용 중
+- **Pulse 배포 제어:** `cockpit_pulse_enabled`(기본 true)로 Pulse 전체 on/off. 회사 서버는 false 시 Cockpit+PatchMon만 배포
+- **Pulse Docker 포트:** `127.0.0.1:7655` loopback 바인딩만 (LAN 노출 금지). 외부 접속은 Tailscale Serve 10000만
+- **Pulse 인증:** UI setup wizard로 관리자 계정 최초 생성. `PULSE_AUTH_USER`/`PULSE_AUTH_PASS` env preseed 금지 (B1 — 환경변수가 UI 설정을 override함)
+- **Pulse healthcheck:** `/api/health` 엔드포인트 (nc -z 대신 curl로 검증)
+- **Pulse Proxmox 연동:** Tailscale 도메인 사용 (`https://walle.bun-bull.ts.net`, TLS skip 불필요). PVEAuditor 역할 API Token 필요 (수동 생성, IaC 범위 밖)
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요

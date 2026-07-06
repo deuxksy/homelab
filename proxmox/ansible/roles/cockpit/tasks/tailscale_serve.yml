@@ -1,6 +1,6 @@
 ---
 # Tailscale Serve 다중 포트 매핑 (reset 기반 4상태 동적 패턴, R1/R2)
-# 443   → Cockpit (https+insecure, 자가서명 TLS) — 항상
+# 9090  → Cockpit (https+insecure, 자가서명 TLS) — 항상
 # 8443  → PatchMon (http, Docker loopback) — cockpit_patchmon_enabled 시
 # 10000 → Pulse (http, Docker loopback) — cockpit_pulse_enabled 시
 # idempotency: 필요 포트 집합 vs 현재 TCP 포트 비교 → 차이 시 reset 후 활성 서비스만 재구성
@@ -26,7 +26,7 @@
   ansible.builtin.set_fact:
     serve_required_ports: >-
       {{
-        ['443']
+        ['9090']
         | union((cockpit_patchmon_enabled | bool) | ternary(['8443'], []))
         | union((cockpit_pulse_enabled | bool) | ternary(['10000'], []))
       }}
@@ -47,7 +47,7 @@
 - name: Tailscale Serve 재구성 (reset 기반)
   ansible.builtin.shell: |
     tailscale serve reset
-    tailscale serve --bg --https=443 --set-path / https+insecure://localhost:{{ cockpit_listen_port }}
+    tailscale serve --bg --https=9090 --set-path / https+insecure://localhost:{{ cockpit_listen_port }}
     {% if cockpit_patchmon_enabled | bool %}
     tailscale serve --bg --https={{ cockpit_patchmon_serve_port }} --set-path / http://localhost:3000
     {% endif %}

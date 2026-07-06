@@ -40,11 +40,11 @@
     proto: tcp
   when: cockpit_manage_firewall | bool
 
-- name: UFW — Tailscale 인터페이스만 443 허용 (Serve)
+- name: UFW — Tailscale 인터페이스만 9090 허용 (Cockpit Serve)
   community.general.ufw:
     rule: allow
     direction: in
-    port: "443"
+    port: "9090"
     proto: tcp
     interface: tailscale0
   when:
