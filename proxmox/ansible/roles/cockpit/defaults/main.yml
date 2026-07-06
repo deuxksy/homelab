@@ -12,3 +12,10 @@ cockpit_patchmon_dir: /opt/patchmon
 cockpit_patchmon_version: latest      # 회사 서버에서는 버전 핀 권장
 cockpit_patchmon_cors_origin: "https://cockpit.bun-bull.ts.net:8443"
 cockpit_patchmon_serve_port: 8443     # Tailscale Serve HTTPS 포트 (허용: 443/8443/10000)
+
+# === Pulse ===
+cockpit_pulse_enabled: true          # false면 Pulse 전체 스킵
+cockpit_pulse_dir: /opt/pulse
+cockpit_pulse_version: latest        # 회사 서버에서는 버전 핀 권장
+cockpit_pulse_internal_port: 7655    # Pulse 컨테이너 내부 포트
+cockpit_pulse_serve_port: 10000      # Tailscale Serve HTTPS 포트 (허용: 443/8443/10000)
