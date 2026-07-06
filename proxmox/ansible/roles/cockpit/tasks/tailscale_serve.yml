@@ -1,10 +1,11 @@
 ---
-# Tailscale Serve 다중 포트 매핑
-# 443 → Cockpit (https+insecure, 자가서명 TLS)
-# 8443 → PatchMon (http, Docker loopback)
-# idempotency: tailscale serve status --json의 TCP 키로 포트 존재 확인
+# Tailscale Serve 다중 포트 매핑 (reset 기반 4상태 동적 패턴, R1/R2)
+# 443   → Cockpit (https+insecure, 자가서명 TLS) — 항상
+# 8443  → PatchMon (http, Docker loopback) — cockpit_patchmon_enabled 시
+# 10000 → Pulse (http, Docker loopback) — cockpit_pulse_enabled 시
+# idempotency: 필요 포트 집합 vs 현재 TCP 포트 비교 → 차이 시 reset 후 활성 서비스만 재구성
 
-- name: Tailscale Serve 상태 확인 (JSON, R-AGY2)
+- name: Tailscale Serve 상태 확인 (JSON, R2)
   ansible.builtin.command: tailscale serve status --json
   register: ts_serve_status
   changed_when: false
@@ -15,47 +16,45 @@
     ts_current_serve: "{{ ts_serve_status.stdout | from_json }}"
   when: ts_serve_status.stdout | length > 0
 
-- name: ts_current_serve 기본값 (빈 stdout 대비)
+- name: ts_current_serve 기본값 (빈 stdout 대비, R2)
   ansible.builtin.set_fact:
     ts_current_serve: {}
   when: ts_serve_status.stdout | length == 0
 
-# 실제 JSON 스키마: { "TCP": { "443": {...}, "8443": {...} }, "Web": { "host:port": {...} } }
-# TCP 키가 HTTPS 매핑 포트를 직접 가리키므로 포트 존재 확인에 사용
-- name: Serve 재구성 필요 여부 (Cockpit만)
+# R1: 활성 서비스에 따른 필요 포트 집합 계산
+- name: 필요 Serve 포트 집합 계산
+  ansible.builtin.set_fact:
+    serve_required_ports: >-
+      {{
+        ['443']
+        | union((cockpit_patchmon_enabled | bool) | ternary(['8443'], []))
+        | union((cockpit_pulse_enabled | bool) | ternary(['10000'], []))
+      }}
+
+# R1: 필요 포트 vs 현재 TCP 포트 비교 → 재구성 필요 여부
+# - 필요한 포트가 현재 없거나 (추가 필요)
+# - 현재 포트 중 필요 없는 것이 있으면 (stale 제거 필요)
+- name: Serve 재구성 필요 여부 판정
   ansible.builtin.set_fact:
     serve_needs_reconfig: >-
       {{
         ts_current_serve.TCP is not defined
-        or ts_current_serve.TCP['443'] is not defined
-        or (ts_current_serve.TCP['8443'] is defined and not (cockpit_patchmon_enabled | bool))
+        or (serve_required_ports | difference(ts_current_serve.TCP.keys())) | length > 0
+        or (ts_current_serve.TCP.keys() | difference(serve_required_ports)) | length > 0
       }}
 
-- name: Serve 재구성 필요 여부 (Cockpit + PatchMon)
-  ansible.builtin.set_fact:
-    serve_needs_reconfig: >-
-      {{
-        ts_current_serve.TCP is not defined
-        or ts_current_serve.TCP['443'] is not defined
-        or ts_current_serve.TCP['8443'] is not defined
-      }}
-  when: cockpit_patchmon_enabled | bool
-
-- name: Tailscale Serve 구성 (Cockpit만 — PatchMon 비활성화)
+# reset 후 활성 서비스만 재구성 (stale 매핑 자동 제거, R1)
+- name: Tailscale Serve 재구성 (reset 기반)
   ansible.builtin.shell: |
     tailscale serve reset
     tailscale serve --bg --https=443 --set-path / https+insecure://localhost:{{ cockpit_listen_port }}
-  when:
-    - serve_needs_reconfig | bool
-    - not (cockpit_patchmon_enabled | bool)
-  changed_when: true
-
-- name: Tailscale Serve 구성 (Cockpit + PatchMon)
-  ansible.builtin.shell: |
-    tailscale serve reset
-    tailscale serve --bg --https=443 --set-path / https+insecure://localhost:{{ cockpit_listen_port }}
+    {% if cockpit_patchmon_enabled | bool %}
     tailscale serve --bg --https={{ cockpit_patchmon_serve_port }} --set-path / http://localhost:3000
+    {% endif %}
+    {% if cockpit_pulse_enabled | bool %}
+    tailscale serve --bg --https={{ cockpit_pulse_serve_port }} --set-path / http://localhost:{{ cockpit_pulse_internal_port }}
+    {% endif %}
   when:
     - serve_needs_reconfig | bool
-    - cockpit_patchmon_enabled | bool
+    - cockpit_tailscale_serve | bool
   changed_when: true
