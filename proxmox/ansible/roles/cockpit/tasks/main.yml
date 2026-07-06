@@ -63,6 +63,18 @@
     - cockpit_tailscale_serve | bool
     - cockpit_patchmon_enabled | bool
 
+- name: UFW — Tailscale 인터페이스만 10000 허용 (Pulse Serve)
+  community.general.ufw:
+    rule: allow
+    direction: in
+    port: "{{ cockpit_pulse_serve_port }}"
+    proto: tcp
+    interface: tailscale0
+  when:
+    - cockpit_manage_firewall | bool
+    - cockpit_tailscale_serve | bool
+    - cockpit_pulse_enabled | bool
+
 # 하위 task
 - name: 인증 설정 import
   ansible.builtin.import_tasks: auth.yml
@@ -72,11 +84,15 @@
 
 - name: Docker 설치 import
   ansible.builtin.import_tasks: docker.yml
-  when: cockpit_patchmon_enabled | bool
+  when: cockpit_patchmon_enabled | bool or cockpit_pulse_enabled | bool
 
 - name: PatchMon 배포 import
   ansible.builtin.import_tasks: patchmon.yml
   when: cockpit_patchmon_enabled | bool
+
+- name: Pulse 배포 import
+  ansible.builtin.import_tasks: pulse.yml
+  when: cockpit_pulse_enabled | bool
 
 - name: Tailscale Serve 구성 import
   ansible.builtin.import_tasks: tailscale_serve.yml
