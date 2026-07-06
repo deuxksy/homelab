@@ -1,3 +1,7 @@
 ---
 my-docker:
   socket: /var/run/docker.sock
+
+moni-docker:
+  host: 100.104.57.49
+  port: 2375

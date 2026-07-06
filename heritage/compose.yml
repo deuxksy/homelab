@@ -25,8 +25,8 @@ services:
       - HOMEPAGE_ALLOWED_HOSTS=heritage.bun-bull.ts.net,localhost,127.0.0.1
     volumes:
       - ./homepage/config:/app/config
-      # TODO: Docker socket 마운트는 Homepage docker 위젯 사용시에만 필요. 보안 강화를 위해 제거 권장
-      # - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Docker socket — Homepage docker widget용 (Aria2, heritage containers)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       # TODO: 루트 FS 마운트는 Homepage 시스템 정보 위젯 사용시에만 필요. 보안 강화를 위해 제거 권장
       # - /:/host:ro
       # - /proc:/host/proc:ro
