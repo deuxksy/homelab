@@ -38,29 +38,6 @@
               name: Google Calendar
               color: amber
 
-- Monitoring:
-    - Cockpit:
-        label: "Server Console"
-        icon: mdi-console-network
-        href: https://moni.bun-bull.ts.net:9090
-        description: moni VM 102 - systemd web console
-
-    - PatchMon:
-        label: "Patch Monitor"
-        icon: mdi-shield-update
-        href: https://moni.bun-bull.ts.net:8443
-        description: moni VM 102 - 패치 모니터링
-        server: moni-docker
-        container: patchmon-server-1
-
-    - Pulse:
-        label: "Unified Monitor"
-        icon: mdi-pulse
-        href: https://moni.bun-bull.ts.net:10000
-        description: moni VM 102 - 통합 모니터링
-        server: moni-docker
-        container: pulse-pulse-1
-
 - Download:
     - Transmission:
         label: "Torrent Node"
