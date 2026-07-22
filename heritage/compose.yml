@@ -124,7 +124,7 @@ services:
       - "6888:6888/udp"
     volumes:
       - aria2-config:/config
-      - /mnt/data2/downloads:/downloads:rw
+      - /mnt/data2/torrent/downloads/aria:/downloads:rw
     networks:
       - heritage
     logging:
