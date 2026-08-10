@@ -19,10 +19,28 @@
         update_cache: true
 
     # --- Tailscale (LXC 호스트에 직접 설치) ---
-    - name: Install Tailscale
-      ansible.builtin.shell:
-        cmd: curl -fsSL https://tailscale.com/install.sh | sh
-        creates: /usr/bin/tailscaled
+    - name: Add Tailscale GPG key
+      ansible.builtin.get_url:
+        url: "https://pkgs.tailscale.com/stable/debian/{{ ansible_distribution_release }}.noarmor.gpg"
+        dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Add Tailscale repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg]
+          https://pkgs.tailscale.com/stable/debian
+          {{ ansible_distribution_release }} main
+        state: present
+        filename: tailscale
+        update_cache: true
+
+    - name: Install or upgrade Tailscale
+      ansible.builtin.apt:
+        name: tailscale
+        state: latest
 
     - name: Enable tailscaled
       ansible.builtin.systemd:
