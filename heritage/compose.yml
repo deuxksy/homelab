@@ -1,7 +1,7 @@
 services:
-  # --- L7 Reverse Proxy ---
+  # --- L7 Reverse Proxy (Caddy) ---
   caddy:
-    image: caddy:latest
+    image: docker.io/library/caddy:latest
     container_name: caddy
     restart: unless-stopped
     network_mode: host
@@ -10,7 +10,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
-  # --- Dashboard ---
+  # --- Dashboard (Homepage) ---
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
@@ -20,19 +20,14 @@ services:
     network_mode: host
     environment:
       - PUID=1000
-      - PGID=996
+      - PGID=1000
       - TZ=Asia/Seoul
-      - HOMEPAGE_ALLOWED_HOSTS=heritage.bun-bull.ts.net,localhost,127.0.0.1
+      - HOMEPAGE_ALLOWED_HOSTS=*
     volumes:
       - ./homepage/config:/app/config
-      # Docker socket — Homepage docker widget용 (Aria2, heritage containers)
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # TODO: 루트 FS 마운트는 Homepage 시스템 정보 위젯 사용시에만 필요. 보안 강화를 위해 제거 권장
-      # - /:/host:ro
-      # - /proc:/host/proc:ro
-      # - /sys:/host/sys:ro
 
-  # --- Download ---
+  # --- Acquisition Engine: Torrent (Transmission) ---
   transmission:
     image: lscr.io/linuxserver/transmission:latest
     container_name: transmission
@@ -53,32 +48,34 @@ services:
       - /mnt/data2/torrent/downloads/watch:/watch
     mem_limit: 512m
 
-  # --- Monitoring ---
-#   gatus:
-#     image: twinproduction/gatus:latest
-#     container_name: gatus
-#     restart: unless-stopped
-#     network_mode: host
-#     volumes:
-#       - ./gatus/config.yaml:/config/config.yaml:ro
-#       - ./gatus/data:/data
-#     environment:
-#       - TZ=Asia/Seoul
-#
-#   beszel:
-#     image: docker.io/henrygd/beszel:latest
-#     container_name: beszel-hub
-#     restart: unless-stopped
-#     ports:
-#       - "8090:8090"
-#     volumes:
-#       - ./beszel/data:/beszel_data
-#       - ./beszel/socket:/beszel_socket
-#     environment:
-#       - TZ=Asia/Seoul
-#       - APP_URL=https://heritage.bun-bull.ts.net/beszel
-#
-  # --- Streaming ---
+  # --- Acquisition Engine: Direct Download (Aria2) ---
+  aria2:
+    image: p3terx/aria2-pro:test
+    container_name: aria2
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK_SET=022
+      - RPC_PORT=6800
+      - LISTEN_PORT=6888
+      - DISK_CACHE=64M
+      - IPV6_MODE=false
+      - UPDATE_TRACKERS=false
+      - TZ=Asia/Seoul
+    ports:
+      - "6800:6800"
+      - "6888:6888"
+      - "6888:6888/udp"
+    volumes:
+      - aria2_config:/config
+      - /mnt/data2/torrent/downloads/aria:/downloads:rw
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+
+  # --- Digital Theater (Jellyfin) ---
   jellyfin:
     image: docker.io/jellyfin/jellyfin:latest
     container_name: jellyfin
@@ -102,39 +99,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # --- Download Manager ---
-  aria2:
-    image: p3terx/aria2-pro:test
-    container_name: aria2
-    restart: unless-stopped
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - UMASK_SET=022
-      # - RPC_SECRET=${ARIA2_RPC_SECRET}
-      - RPC_PORT=6800
-      - LISTEN_PORT=6888
-      - DISK_CACHE=64M
-      - IPV6_MODE=false
-      - UPDATE_TRACKERS=false
-      - TZ=Asia/Seoul
-    ports:
-      - "6800:6800"
-      - "6888:6888"
-      - "6888:6888/udp"
-    volumes:
-      - aria2-config:/config
-      - /mnt/data2/torrent/downloads/aria:/downloads:rw
-    networks:
-      - heritage
-    logging:
-      driver: json-file
-      options:
-        max-size: 1m
 volumes:
-  aria2-config:
+  aria2_config:
   caddy_data:
   caddy_config:
-
-networks:
-  heritage:
