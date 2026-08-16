@@ -1,5 +1,5 @@
 ---
-- name: Configure walle Tailscale Serve
+- name: Configure walle Host & Utilities
   hosts: proxmox_hosts
   gather_facts: false
 
@@ -41,6 +41,54 @@
         replace: 'false'
         backup: true
       notify: Restart pveproxy
+
+    # --- System Utilities (ncdu, yazi) ---
+    - name: Install system utility packages
+      ansible.builtin.apt:
+        name:
+          - ncdu
+          - unzip
+        state: present
+        update_cache: false
+
+    - name: Check if yazi is installed
+      ansible.builtin.command: which yazi
+      register: yazi_check
+      changed_when: false
+      failed_when: false
+
+    - name: Download and install yazi binary
+      when: yazi_check.rc != 0
+      block:
+        - name: Download yazi archive
+          ansible.builtin.get_url:
+            url: "https://github.com/sxyazi/yazi/releases/latest/download/yazi-x86_64-unknown-linux-musl.zip"
+            dest: /tmp/yazi.zip
+            mode: "0644"
+
+        - name: Unarchive yazi
+          ansible.builtin.unarchive:
+            src: /tmp/yazi.zip
+            dest: /tmp
+            remote_src: true
+
+        - name: Install yazi binary to /usr/local/bin
+          ansible.builtin.copy:
+            src: "/tmp/yazi-x86_64-unknown-linux-musl/{{ item }}"
+            dest: "/usr/local/bin/{{ item }}"
+            mode: "0755"
+            remote_src: true
+          loop:
+            - yazi
+            - ya
+
+        - name: Clean up temporary yazi files
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /tmp/yazi.zip
+            - /tmp/yazi-x86_64-unknown-linux-musl
 
   handlers:
     - name: Restart pveproxy
