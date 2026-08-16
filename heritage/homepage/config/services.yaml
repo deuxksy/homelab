@@ -1,49 +1,20 @@
+# Homepage Services Configuration - The Heritage Collection
+# https://gethomepage.dev/configs/services/
+
 - Info:
     - Calendar:
         widget:
           type: calendar
           firstDayInWeek: sunday
           view: monthly
-          timezone: Asia/Seoul
-          integrations:
-            - type: ical
-              url: https://calendar.google.com/calendar/ical/deuxksy%40gmail.com/public/basic.ics
-              name: Google Calendar
-              color: amber
-    - Stocks:
-        widget:
-          type: stocks
-          provider: finnhub
-          watchlist:
-            - EWY
-            - SPY
-            - QQQ
-            - ASHR
-            - KSTR
-            - EWJ
-            - INDY
-            - VNM
-            - FEZ
-
-    - Agenda:
-        widget:
-          type: calendar
-          view: agenda
           maxEvents: 10
           showTime: true
-          previousDays: 3
-          integrations:
-            - type: ical
-              url: https://calendar.google.com/calendar/ical/deuxksy%40gmail.com/public/basic.ics
-              name: Google Calendar
-              color: amber
 
-- Download:
+- Media:
     - Transmission:
         label: "Torrent Node"
         icon: transmission.png
         href: https://heritage.bun-bull.ts.net/transmission/web/
-        server: my-docker
         container: transmission
         widget:
           type: transmission
@@ -51,8 +22,8 @@
 
     - Aria2:
         label: "Download Manager"
-        icon: mdi-download
-        server: my-docker
+        icon: aria-ng.png
+        href: https://heritage.bun-bull.ts.net/aria2/
         container: aria2
 
 - Streaming:
@@ -60,13 +31,11 @@
         label: "Media Server"
         icon: jellyfin.png
         href: https://heritage.bun-bull.ts.net/jellyfin
-        server: my-docker
         container: jellyfin
         widget:
           type: jellyfin
-          url: http://localhost:8096/jellyfin
-          key: {{HOMEPAGE_VAR_KEY_JELLYFIN}}
-          version: 2
+          url: http://localhost:8096
+          key: "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}"
           enableBlocks: true
           enableNowPlaying: true
           enableUser: true
