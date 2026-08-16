@@ -1,13 +1,21 @@
+# Caddyfile for Heritage Collection
+# Tailscale Web Proxy & Reverse Proxy
+
 :9080 {
-    # Jellyfin (Base URL 설정 필요)
+    # Jellyfin
     redir /jellyfin /jellyfin/
     handle /jellyfin/* {
         reverse_proxy localhost:8096
     }
 
-    # Transmission (prefix 유지)
+    # Transmission
     handle /transmission* {
         reverse_proxy localhost:8091
+    }
+
+    # Aria2 (AriaNg Web UI)
+    handle /aria2* {
+        reverse_proxy localhost:6888
     }
 
     # Homepage (catch-all)
