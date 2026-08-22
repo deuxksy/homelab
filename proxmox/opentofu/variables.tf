@@ -22,9 +22,9 @@ variable "heritage_resources" {
     disk   = number
   })
   default = {
-    cores  = 2
-    memory = 1536
-    swap   = 512
+    cores  = 4
+    memory = 4096
+    swap   = 1024
     disk   = 50
   }
 }

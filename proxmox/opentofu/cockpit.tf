@@ -3,7 +3,7 @@ resource "proxmox_virtual_environment_vm" "cockpit" {
   vm_id       = var.cockpit_vmid
   node_name   = var.proxmox_node
   description = "Cockpit web management (Ubuntu 24.04 LTS)"
-  started     = true
+  started     = false
   tags        = ["monitoring", "cockpit"]
 
   clone {
@@ -36,7 +36,7 @@ resource "proxmox_virtual_environment_vm" "cockpit" {
   initialization {
     user_account {
       username = "ubuntu"
-      keys     = [file("/home/deck/.ssh/id_ed25519.pub")]
+      keys     = [file(pathexpand("~/.ssh/id_ed25519.pub"))]
     }
     ip_config {
       ipv4 {
