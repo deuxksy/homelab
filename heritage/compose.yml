@@ -99,7 +99,93 @@ services:
       retries: 3
       start_period: 40s
 
+  # --- Photo Management (Immich) ---
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION}
+    container_name: immich_server
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:2283:2283"
+    volumes:
+      - ${UPLOAD_LOCATION}:/data
+      - /mnt/data2/torrent/downloads/aria:/mnt/aria:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - immich-redis
+      - immich-postgres
+    mem_limit: 1g
+    healthcheck:
+      disable: false
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION}
+    container_name: immich_machine_learning
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - model_cache:/cache
+    mem_limit: 1.5g
+    healthcheck:
+      disable: false
+
+  immich-redis:
+    image: docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: immich_redis
+    restart: always
+    mem_limit: 128m
+
+  immich-postgres:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    container_name: immich_postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_INITDB_ARGS: --data-checksums
+    volumes:
+      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+    shm_size: 128mb
+    mem_limit: 768m
+    healthcheck:
+      disable: false
+
+  # --- Hardware Monitoring (Pulse, moni 이전) ---
+  pulse:
+    image: rcourtman/pulse:latest
+    container_name: pulse
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7655:7655"
+    volumes:
+      - pulse_data:/data
+    mem_limit: 512m
+    cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # B1: 인증 env vars 사용 안 함 — UI setup wizard 초기화 (기존 moni 패턴)
+      FRONTEND_PORT: "7655"
+      PULSE_METRICS_PORT: "9091"
+      PULSE_METRICS_BIND_ADDRESS: "127.0.0.1"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7655/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   aria2_config:
   caddy_data:
   caddy_config:
+  model_cache:
+  pulse_data:
