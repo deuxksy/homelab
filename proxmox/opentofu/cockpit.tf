@@ -36,7 +36,7 @@ resource "proxmox_virtual_environment_vm" "cockpit" {
   initialization {
     user_account {
       username = "ubuntu"
-      keys     = [file(pathexpand("~/.ssh/id_ed25519.pub"))]
+      keys     = [trimspace(file(pathexpand("~/.ssh/id_ed25519.pub")))]
     }
     ip_config {
       ipv4 {
