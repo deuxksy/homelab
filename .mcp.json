@@ -6,7 +6,7 @@
         "proxmox-mcp-plus"
       ],
       "env": {
-        "PROXMOX_MCP_CONFIG": "/home/deck/.config/proxmox-mcp/config.json"
+        "PROXMOX_MCP_CONFIG": "${HOME}/.config/proxmox-mcp/config.json"
       }
     },
     "kubernetes": {
