@@ -20,12 +20,6 @@
           type: transmission
           url: http://localhost:8091
 
-    - Aria2:
-        label: "Download Manager"
-        icon: aria-ng.png
-        container: aria2
-        # Web UI 없음 (RPC 클라이언트만) — href 미사용, 컨테이너 상태 카드만
-
 - Streaming:
     - Jellyfin:
         label: "Media Server"
@@ -49,3 +43,5 @@
         icon: immich.png
         href: https://heritage.bun-bull.ts.net:2283
         container: immich_server
+        # 위젯 미사용 — homepage(v2.1.2)가 구 API 경로(/api/server-info/*)를 호출해
+        # Immich v3(경로 개명 /api/server/*)와 호환 안 됨. 상류 지원 시 재활성화

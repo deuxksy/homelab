@@ -213,3 +213,5 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Aria2 RPC Secret:** `RPC_SECRET` 미설정 시 이미지 기본값 `P3TERX` 사용. RPC 클라이언트 연결 시 필요
 - **Aria2 이미지:** `p3terx/aria2-pro:test` 사용 (latest 4년 전, `:test` 태그가 daily build)
 - **Homepage aria2 위젯:** 미지원 ([#1280](https://github.com/gethomepage/homepage/discussions/1280)). 컨테이너 상태 카드만 가능
+- **Homepage Immich 위젯:** homepage v2.1.2까지 구 API 경로(`/api/server-info/*`)를 호출 — Immich v3가 `/api/server/*`로 개명해 404 호환 불가. 상류 지원 시 services.yaml 위젯 블록 재활성화 (.env 키 `HOMEPAGE_VAR_KEY_IMMICH` 보존)
+- **Homepage docker.sock:** 앱이 node(uid 1000)로 실행되어 docker GID(996) 그룹 미소속 시 EACCES — compose `group_add: ["996"]`로 해결. `.env` 변경(신규 키)은 컨테이너 재생성 전까지 미적용

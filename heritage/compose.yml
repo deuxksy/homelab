@@ -18,6 +18,9 @@ services:
     env_file:
       - .env
     network_mode: host
+    # 앱이 node(uid 1000)로 실행 — docker.sock 접근 위해 docker GID(996) 그룹 추가
+    group_add:
+      - "996"
     environment:
       - PUID=1000
       - PGID=1000

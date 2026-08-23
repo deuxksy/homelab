@@ -27,12 +27,12 @@ layout:
   Info:
     style: row
     columns: 2
-  Monitoring:
-    style: row
-    columns: 2
-  Acquisition:
+  Media:
     style: row
     columns: 1
   Streaming:
+    style: row
+    columns: 1
+  Photos:
     style: row
     columns: 1
