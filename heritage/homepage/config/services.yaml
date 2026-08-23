@@ -48,9 +48,3 @@
         icon: immich.png
         href: https://heritage.bun-bull.ts.net:2283
         container: immich_server
-
-- Monitoring:
-    - Pulse:
-        label: "Hardware Monitor"
-        href: https://heritage.bun-bull.ts.net:10000
-        container: pulse
