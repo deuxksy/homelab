@@ -85,6 +85,9 @@ services:
     restart: unless-stopped
     ports:
       - "8096:8096"
+    # Intel QuickSync — LXC 패스스루된 /dev/dri (heritage.tf)
+    devices:
+      - /dev/dri:/dev/dri
     user: "1000:1000"
     environment:
       - TZ=Asia/Seoul

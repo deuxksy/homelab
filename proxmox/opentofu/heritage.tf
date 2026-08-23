@@ -47,6 +47,24 @@ resource "proxmox_virtual_environment_container" "heritage" {
     deny_write = false
   }
 
+  # Intel QuickSync (N100 iGPU) — Jellyfin 하드웨어 트랜스코딩용
+  # unprivileged LXC → 0666으로 넘겨야 컨테이너 내 user 1000(jellyfin) 접근 가능
+  device_passthrough {
+    path       = "/dev/dri/card0"
+    mode       = "0666"
+    uid        = 0
+    gid        = 0
+    deny_write = false
+  }
+
+  device_passthrough {
+    path       = "/dev/dri/renderD128"
+    mode       = "0666"
+    uid        = 0
+    gid        = 0
+    deny_write = false
+  }
+
   mount_point {
     volume = "/mnt/data1"
     path   = "/mnt/data1"
