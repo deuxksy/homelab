@@ -17,7 +17,7 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 │   ├── Transmission (torrent)
 │   ├── Jellyfin (streaming)
 │   ├── Aria2 (다운로드 매니저, port 6800)
-│   ├── Immich v3.1.0 (사진 관리 — immich_server/immich_machine_learning/immich_redis/immich_postgres, :2283 loopback, server mem_limit 1.5g)
+│   ├── Immich v3.1.0 (사진 관리 — immich_server/immich_redis/immich_postgres, :2283 loopback + LAN :2284. ML 비활성: 스마트검색/인물인식 미사용, 탐색형 갤러리)
 │   └── Pulse (통합 모니터링, :7655 loopback — moni에서 이전)
 └── templates: 901 ubuntu-2404-template (moni VM clone 원본)
 ```
@@ -91,7 +91,7 @@ uv run --with proxmox-mcp-plus python3 -c "from proxmox_mcp.config.loader import
 
 # Heritage 서비스 재시작 / 로그
 # 컨테이너: caddy, homepage, transmission, aria2, jellyfin,
-#           immich_server, immich_machine_learning, immich_redis, immich_postgres, pulse
+#           immich_server, immich_redis, immich_postgres, pulse
 ssh heritage "cd /opt/heritage && docker compose restart <service>"
 ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 <service>"
 
@@ -155,7 +155,7 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 | `proxmox/ansible/roles/cockpit/templates/patchmon.env.j2` | PatchMon .env 템플릿 (시크릿 변수 주입) |
 | `proxmox/ansible/roles/cockpit/templates/pulse-docker-compose.yml.j2` | Pulse Compose 템플릿 (1컨테이너, 127.0.0.1:7655 loopback) |
 | `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (cockpit_admin_password, tailscale_auth_key, patchmon_* 5키) |
-| `heritage/` | Heritage 서비스 Docker Compose (10컨테이너: caddy, homepage, transmission, aria2, jellyfin, immich×4, pulse) |
+| `heritage/` | Heritage 서비스 Docker Compose (9컨테이너: caddy, homepage, transmission, aria2, jellyfin, immich×3, pulse — ML 제거) |
 | `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스. Immich env 포함: `IMMICH_VERSION`, `UPLOAD_LOCATION`, `DB_DATA_LOCATION`, `DB_HOSTNAME`, `REDIS_HOSTNAME` 등) |
 | `heritage/caddy/` | Caddy L7 리버스 프록시 설정 (Caddyfile) |
 | `scripts/` | Proxmox 호스트 실행 스크립트 (create-ubuntu-template.sh 등) |
@@ -191,12 +191,12 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Pulse 인증:** UI setup wizard로 관리자 계정 최초 생성. `PULSE_AUTH_USER`/`PULSE_AUTH_PASS` env preseed 금지 (B1 — 환경변수가 UI 설정을 override함)
 - **Pulse healthcheck:** `/api/health` 엔드포인트 (nc -z 대신 curl로 검증)
 - **Pulse Proxmox 연동:** Tailscale 도메인 사용 (`https://walle.bun-bull.ts.net`, TLS skip 불필요). PVEAuditor 역할 API Token 필요 (수동 생성, IaC 범위 밖)
-- **moni 재기동 시 RAM 재부족:** walle(host) 7.5GB 제약 — heritage(4GB)와 moni(4GB) 동시 구동 불가. 재기동하려면 heritage 축소 또는 Immich ML(`immich_machine_learning`) 중지 필요. 재기동 후 `hosts.ini` moni IP는 DHCP 재임대 확인 필수
+- **moni 재기동 시 RAM 재부족:** walle(host) 7.5GB 제약 — heritage(4GB)와 moni(4GB) 동시 구동 불가. 재기동하려면 heritage 축소 필요. 재기동 후 `hosts.ini` moni IP는 DHCP 재임대 확인 필수
 - **Immich subpath 미지원:** path-based 라우팅 불가 → 전용 포트(2283, Tailscale Serve) 노출 필수
 - **Immich External Library:** aria2 다운로드 경로(`/mnt/data2/torrent/downloads/aria`)를 `/mnt/aria:ro`로 마운트. External Library 등록/관리는 Immich Admin UI에서 수행
 - **Immich 스토리지 경로:** `UPLOAD_LOCATION=/mnt/data1/immich`(data1), `DB_DATA_LOCATION=/opt/heritage/postgres`(rootfs). 신규 bind mount 디렉토리는 walle host에서 사전 생성 필요 — unprivileged LXC 권한 제약
 - **Immich .env 호스트명:** `DB_HOSTNAME=immich-postgres`, `REDIS_HOSTNAME=immich-redis` 필수 — 컨테이너명(`immich_postgres` 등)과 서비스명이 달라 미설정 시 연결 실패
-- **Immich 초기 ML 인덱싱:** 라이브러리 규모에 따라 수일 소요 (백그라운드 job)
+- **Immich ML 비활성 (2026-08-23):** `IMMICH_MACHINE_LEARNING_URL=false` + ML 컨테이너 제거 — 8만장 임베딩이 CPU/swap 과부하 유발해 탐색형 용도로는 과투자 판단. 재활성: env 제거 + compose에 immich-machine-learning 서비스·model_cache 볼륨 복원
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요

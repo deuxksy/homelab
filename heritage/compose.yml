@@ -121,24 +121,11 @@ services:
     depends_on:
       - immich-redis
       - immich-postgres
-    # CPU 제한(초기 인덱싱 기간): ML 2.0 + server 1.0 = 합계 3.0, 잔여 1코어 운영용 보장
     mem_limit: 1.5g
-    cpus: "1.0"
     healthcheck:
       disable: false
-
-  immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION}
-    container_name: immich_machine_learning
-    restart: always
-    env_file:
-      - .env
-    volumes:
-      - model_cache:/cache
-    mem_limit: 1.5g
-    cpus: "2.0"
-    healthcheck:
-      disable: false
+    # ML 비활성 — IMMICH_MACHINE_LEARNING_URL=false (.env). 탐색형 갤러리 용도로
+    # 스마트검색/인물인식 불필요 판단(2026-08-23). 재활성: env 제거 + ML 서비스 복원
 
   immich-redis:
     image: docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
@@ -196,5 +183,4 @@ volumes:
   aria2_config:
   caddy_data:
   caddy_config:
-  model_cache:
   pulse_data:

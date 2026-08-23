@@ -43,5 +43,14 @@
         icon: immich.png
         href: https://heritage.bun-bull.ts.net:2283
         container: immich_server
-        # 위젯 미사용 — homepage(v2.1.2)가 구 API 경로(/api/server-info/*)를 호출해
-        # Immich v3(경로 개명 /api/server/*)와 호환 안 됨. 상류 지원 시 재활성화
+        # homepage 내장 immich 위젯은 v3 API 미지원(/api/server-info/* 404) — customapi 우회
+        widget:
+          type: customapi
+          url: http://localhost:2283/api/server/statistics
+          headers:
+            x-api-key: "{{HOMEPAGE_VAR_KEY_IMMICH}}"
+          mappings:
+            - field: photos
+              label: PHOTOS
+            - field: videos
+              label: VIDEOS
