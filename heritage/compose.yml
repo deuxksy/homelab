@@ -121,7 +121,9 @@ services:
     depends_on:
       - immich-redis
       - immich-postgres
+    # 썸네일/프리뷰 생성 배치가 Jellyfin 재생과 경합하지 않도록 1코어로 제한
     mem_limit: 1.5g
+    cpus: "1.0"
     healthcheck:
       disable: false
     # ML 비활성 — IMMICH_MACHINE_LEARNING_URL=false (.env). 탐색형 갤러리 용도로
