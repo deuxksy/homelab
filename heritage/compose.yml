@@ -121,7 +121,9 @@ services:
     depends_on:
       - immich-redis
       - immich-postgres
+    # CPU 제한(초기 인덱싱 기간): ML 2.0 + server 1.0 = 합계 3.0, 잔여 1코어 운영용 보장
     mem_limit: 1.5g
+    cpus: "1.0"
     healthcheck:
       disable: false
 
@@ -134,6 +136,7 @@ services:
     volumes:
       - model_cache:/cache
     mem_limit: 1.5g
+    cpus: "2.0"
     healthcheck:
       disable: false
 
