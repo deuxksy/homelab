@@ -34,7 +34,8 @@
         container: jellyfin
         widget:
           type: jellyfin
-          url: http://localhost:8096
+          # BaseUrl=/jellyfin 설정이라 위젯 URL에도 base path 필수 (/emby/*가 302됨)
+          url: http://localhost:8096/jellyfin
           key: "{{HOMEPAGE_VAR_KEY_JELLYFIN}}"
           enableBlocks: true
           enableNowPlaying: true
