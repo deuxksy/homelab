@@ -107,7 +107,10 @@ services:
     env_file:
       - .env
     ports:
+      # 2283 loopback: Tailscale Serve(https 2283) 전용 — tailscaled가 tailnet IP:2283 선점
+      # 2284 LAN: TV/폰 등 Tailscale 없는 기기용 직접 접속 (http://<LAN-IP>:2284)
       - "127.0.0.1:2283:2283"
+      - "2284:2283"
     volumes:
       - ${UPLOAD_LOCATION}:/data
       - /mnt/data2/torrent/downloads/aria:/mnt/aria:ro

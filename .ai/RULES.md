@@ -37,7 +37,7 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | Homepage | `https://heritage.bun-bull.ts.net/` | 대시보드 |
 | Jellyfin | `https://heritage.bun-bull.ts.net/jellyfin` | 스트리밍 |
 | Transmission | `https://heritage.bun-bull.ts.net/transmission` | 토렌트 |
-| Immich | `https://heritage.bun-bull.ts.net:2283` | 사진 관리, Tailscale Serve(2283→http://localhost:2283) |
+| Immich | `https://heritage.bun-bull.ts.net:2283` | 사진 관리, Tailscale Serve(2283→http://localhost:2283). LAN 직접: `http://192.168.221.214:2284` (Tailscale 없는 기기·TV용) |
 | Pulse | `https://heritage.bun-bull.ts.net:10000` | 통합 모니터링, Tailscale Serve(10000→http://localhost:7655), moni에서 이전 |
 | Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
 | Aria2 RPC | `ws://heritage.bun-bull.ts.net:6800/jsonrpc` | 다운로드 매니저, RPC Secret: P3TERX |
@@ -178,6 +178,7 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Cockpit admin 계정:** Ansible이 동적 생성 (`cockpit-admin`, passworded sudo — NOPASSWD 지양). 비밀번호는 `proxmox/ansible/secrets.sops.yaml`
 - **Cockpit VM SSH:** `ubuntu` 계정 + walle proxyjump (`ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117`). `crong@moni` 불가 (SSH 키 미등록)
 - **Tailscale Serve 포트:** 80 미사용. 443은 walle(→8006 PVE UI)과 heritage(→9080 Caddy)가 사용. Immich=2283, Pulse=10000 (비표준 HTTPS 포트도 지원). moni(재기동 시) Cockpit=9090, PatchMon=8443
+- **Immich LAN 직접 접속 (2284):** tailscaled가 tailnet IP의 2283을 선점하므로 컨테이너의 `0.0.0.0:2283` 바인딩 불가 (address already in use). compose는 `127.0.0.1:2283`(Serve용) + `2284:2283`(LAN용) 이중 구성 — LAN 기기는 `http://<heritage-LAN-IP>:2284`로 접속. heritage IP는 DHCP라 변경 시 URL 갱신 필요
 - **Tailscale Serve 4상태 동적 패턴:** reset 기반 재구성 (9090 항상 + 8443/10000 조건부). `serve_required_ports` vs `ts_current_serve.TCP.keys()` 비교로 idempotency 보장
 - **PatchMon 배포 제어:** `cockpit_patchmon_enabled`(기본 true)로 Docker/PatchMon 전체 on/off. 회사 서버는 false 시 Cockpit만 배포 (재현성)
 - **PatchMon loopback 바인딩:** docker-compose `127.0.0.1:3000:3000` (LAN 노출 금지). 외부 접속은 Tailscale Serve 8443만
