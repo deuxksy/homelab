@@ -68,7 +68,6 @@
           tailscale serve reset
           tailscale serve --bg --set-path / 9080
           tailscale serve --bg --https=2283 --set-path / http://localhost:2283
-          tailscale serve --bg --https=10000 --set-path / http://localhost:7655
       changed_when: true
 
     # --- Docker ---

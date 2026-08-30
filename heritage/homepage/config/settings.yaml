@@ -27,9 +27,9 @@ layout:
   Info:
     style: row
     columns: 2
-  Media:
+  Download:
     style: row
-    columns: 1
+    columns: 2
   Streaming:
     style: row
     columns: 1
