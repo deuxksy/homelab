@@ -154,7 +154,7 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 | `proxmox/ansible/roles/cockpit/templates/pulse-docker-compose.yml.j2` | Pulse Compose 템플릿 (1컨테이너, 127.0.0.1:7655 loopback) |
 | `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (cockpit_admin_password, tailscale_auth_key, patchmon_* 5키) |
 | `heritage/` | Heritage 서비스 Docker Compose (8컨테이너: caddy, homepage, transmission, aria2, jellyfin, immich×3 — ML/Pulse 제거) |
-| `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스. Immich env 포함: `IMMICH_VERSION`, `UPLOAD_LOCATION`, `DB_DATA_LOCATION`, `DB_HOSTNAME`, `REDIS_HOSTNAME` 등) |
+| `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스. Immich env 포함: `IMMICH_VERSION`, `UPLOAD_LOCATION`, `DB_DATA_LOCATION`, `DB_HOSTNAME`, `REDIS_HOSTNAME` 및 `HOMEPAGE_VAR_KEY_*`, `HOMEPAGE_VAR_PROXMOX_TOKEN_*` 등) |
 | `heritage/caddy/` | Caddy L7 리버스 프록시 설정 (Caddyfile) |
 | `scripts/` | Proxmox 호스트 실행 스크립트 (create-ubuntu-template.sh 등) |
 | `docs/` | 문서 (architecture.md, README.md, superpowers/specs·plans — Immich 설계: `2026-08-23-immich-design.md`) |
@@ -207,4 +207,7 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Aria2 RPC Secret:** `RPC_SECRET` 미설정 시 이미지 기본값 `P3TERX` 사용. RPC 클라이언트 연결 시 필요
 - **Aria2 이미지:** `p3terx/aria2-pro:test` 사용 (latest 4년 전, `:test` 태그가 daily build)
 - **Homepage aria2 위젯:** 내장 전용 위젯은 미지원하나 `customapi`를 통한 JSON-RPC(`aria2.getGlobalStat`) 호출 및 `server: my-docker`, `container: aria2`로 상태 모니터링 연동 구성됨
+- **Homepage Proxmox 위젯:** API 호출은 Tailscale Serve 443 경유(`https://walle.bun-bull.ts.net`) — 자가서명 8006 직접 호출은 Node fetch TLS 검증 실패. 인증은 `root@pam!gethomepage.dev` 토큰 (privsep=1이라 `PVEAuditor@/` ACL 부여 필수, 미부여 시 403/빈 VM 목록 반환). 시크릿은 `.env.sops`의 `HOMEPAGE_VAR_PROXMOX_TOKEN_{ID,SECRET}`
+- **Homepage Caddy 위젯:** Caddy admin API(`http://localhost:2019`, LXC loopback, host 네트워크 직접 호출) — upstreams/requests/requests_failed 표시. admin은 LXC 내부 loopback만 리슨하므로 외부 노출 없음
+- **sops age 키:** macOS 등 일부 환경에서 sops가 기본 경로(`~/.config/sops/age/keys.txt`)를 못 찾음 — 복호화 시 `SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt` 명시 필요. 재암호화 시 `sops -e`는 생성 규칙(`.sops.yaml`) 매칭 때문에 입력 파일명이 `*.env.sops`/`*.sops.yaml`이어야 함 (`/tmp/heritage.env.sops` 등으로 작업)
 - **Homepage docker.sock:** 컨테이너의 entrypoint가 `su-exec ${PUID}:${PGID}`로 실행되어 `group_add`의 보조 그룹이 무시됨 — 호스트의 docker GID인 `PGID=996`으로 설정하여 `/var/run/docker.sock` 권한(EACCES) 해결. `.env` 변경(신규 키)은 컨테이너 재생성 전까지 미적용

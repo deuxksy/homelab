@@ -27,6 +27,9 @@ layout:
   Info:
     style: row
     columns: 2
+  Infra:
+    style: row
+    columns: 2
   Download:
     style: row
     columns: 2
