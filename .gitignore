@@ -19,3 +19,6 @@ secrets.sops.yaml.dec
 .DS_Store
 talsecret.yaml
 *.sqlite3*
+
+# OMX
+.omx/
