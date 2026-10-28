@@ -36,6 +36,3 @@ layout:
   Streaming:
     style: row
     columns: 1
-  Photos:
-    style: row
-    columns: 1
