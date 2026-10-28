@@ -16,17 +16,16 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 │   ├── Homepage (dashboard)
 │   ├── Transmission (torrent)
 │   ├── Jellyfin (streaming)
-│   ├── Aria2 (다운로드 매니저, port 6800)
-│   └── Immich v3.1.0 (사진 관리 — immich_server/immich_redis/immich_postgres, :2283 loopback + LAN :2284. ML 비활성: 스마트검색/인물인식 미사용, 탐색형 갤러리)
+│   └── Aria2 (다운로드 매니저, port 6800)
 └── templates: 901 ubuntu-2404-template (moni VM clone 원본)
 ```
 
 > K8s 클러스터(talos 100/101)는 2026-07-06 사용자 의도적 삭제됨. `k8s/` 디렉토리(talconfig.yaml)는 잔재.
 
 **프로비저닝 흐름:** OpenTofu → cloud-init(최소) → Ansible  
-**외부 접속:** `tailscale serve`로 Tailscale이 TLS 종료 — walle: 443→8006(PVE UI), heritage: 443→9080(Caddy) + 2283(Immich). 80 미사용.  
+**외부 접속:** `tailscale serve`로 Tailscale이 TLS 종료 — walle: 443→8006(PVE UI), heritage: 443→9080(Caddy). 80 미사용.  
 **콘텐츠 파이프라인 (상류 자동화는 외부 repo가 담당):**
-- Vesper-X (`~/git/Vesper-X/`, 직링크 추출) → aria2 RPC(heritage:6800) → `/mnt/data2/torrent/downloads/aria` → Immich External Library
+- Vesper-X (`~/git/Vesper-X/`, 직링크 추출) → aria2 RPC(heritage:6800) → `/mnt/data2/torrent/downloads/aria`
 - Meridian-X (`~/git/Meridian-X/`, 토렌트 수집 자동화) → Transmission RPC → `/mnt/data{1,2}/torrent` → Jellyfin
 
 ### 서비스 접속 URL (Tailnet 내부)
@@ -36,7 +35,6 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | Homepage | `https://heritage.bun-bull.ts.net/` | 대시보드 |
 | Jellyfin | `https://heritage.bun-bull.ts.net/jellyfin` | 스트리밍 |
 | Transmission | `https://heritage.bun-bull.ts.net/transmission` | 토렌트 |
-| Immich | `https://heritage.bun-bull.ts.net:2283` | 사진 관리, Tailscale Serve(2283→http://localhost:2283). LAN 직접: `http://192.168.221.214:2284` (Tailscale 없는 기기·TV용) |
 | Proxmox UI | `https://walle.bun-bull.ts.net` | Tailscale Serve(443→8006) |
 | Aria2 RPC | `ws://heritage.bun-bull.ts.net:6800/jsonrpc` | 다운로드 매니저, RPC Secret: P3TERX |
 
@@ -88,8 +86,7 @@ ssh crong@walle.bun-bull.ts.net 'sudo bash -s' < scripts/create-ubuntu-template.
 uv run --with proxmox-mcp-plus python3 -c "from proxmox_mcp.config.loader import load_config; load_config('/home/deck/.config/proxmox-mcp/config.json')" && echo "CONFIG VALID"
 
 # Heritage 서비스 재시작 / 로그
-# 컨테이너: caddy, homepage, transmission, aria2, jellyfin,
-#           immich_server, immich_redis, immich_postgres, pulse
+# 컨테이너: caddy, homepage, transmission, aria2, jellyfin
 ssh heritage "cd /opt/heritage && docker compose restart <service>"
 ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 <service>"
 
@@ -153,8 +150,8 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 | `proxmox/ansible/roles/cockpit/templates/patchmon.env.j2` | PatchMon .env 템플릿 (시크릿 변수 주입) |
 | `proxmox/ansible/roles/cockpit/templates/pulse-docker-compose.yml.j2` | Pulse Compose 템플릿 (1컨테이너, 127.0.0.1:7655 loopback) |
 | `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (cockpit_admin_password, tailscale_auth_key, patchmon_* 5키) |
-| `heritage/` | Heritage 서비스 Docker Compose (8컨테이너: caddy, homepage, transmission, aria2, jellyfin, immich×3 — ML/Pulse 제거) |
-| `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스. Immich env 포함: `IMMICH_VERSION`, `UPLOAD_LOCATION`, `DB_DATA_LOCATION`, `DB_HOSTNAME`, `REDIS_HOSTNAME` 및 `HOMEPAGE_VAR_KEY_*`, `HOMEPAGE_VAR_PROXMOX_TOKEN_*` 등) |
+| `heritage/` | Heritage 서비스 Docker Compose (5컨테이너: caddy, homepage, transmission, aria2, jellyfin — Immich/Pulse 제거) |
+| `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스: `HOMEPAGE_VAR_KEY_*`, `HOMEPAGE_VAR_PROXMOX_TOKEN_*` 등) |
 | `heritage/caddy/` | Caddy L7 리버스 프록시 설정 (Caddyfile) |
 | `scripts/` | Proxmox 호스트 실행 스크립트 (create-ubuntu-template.sh 등) |
 | `docs/` | 문서 (architecture.md, README.md, superpowers/specs·plans — Immich 설계: `2026-08-23-immich-design.md`) |
@@ -175,8 +172,7 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Cockpit Tailscale Serve 스킴:** 백엔드는 `https+insecure://localhost:9090` (Cockpit 자가서명 TLS). 일반 `https://`는 502
 - **Cockpit admin 계정:** Ansible이 동적 생성 (`cockpit-admin`, passworded sudo — NOPASSWD 지양). 비밀번호는 `proxmox/ansible/secrets.sops.yaml`
 - **Cockpit VM SSH:** `ubuntu` 계정 + walle proxyjump (`ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117`). `crong@moni` 불가 (SSH 키 미등록)
-- **Tailscale Serve 포트:** 80 미사용. 443은 walle(→8006 PVE UI)과 heritage(→9080 Caddy)가 사용. Immich=2283. moni(재기동 시) Cockpit=9090, PatchMon=8443
-- **Immich LAN 직접 접속 (2284):** tailscaled가 tailnet IP의 2283을 선점하므로 컨테이너의 `0.0.0.0:2283` 바인딩 불가 (address already in use). compose는 `127.0.0.1:2283`(Serve용) + `2284:2283`(LAN용) 이중 구성 — LAN 기기는 `http://<heritage-LAN-IP>:2284`로 접속. heritage IP는 DHCP라 변경 시 URL 갱신 필요
+- **Tailscale Serve 포트:** 80 미사용. 443은 walle(→8006 PVE UI)과 heritage(→9080 Caddy)가 사용. moni(재기동 시) Cockpit=9090, PatchMon=8443
 - **Tailscale Serve 4상태 동적 패턴:** reset 기반 재구성 (9090 항상 + 8443/10000 조건부). `serve_required_ports` vs `ts_current_serve.TCP.keys()` 비교로 idempotency 보장
 - **PatchMon 배포 제어:** `cockpit_patchmon_enabled`(기본 true)로 Docker/PatchMon 전체 on/off. 회사 서버는 false 시 Cockpit만 배포 (재현성)
 - **PatchMon loopback 바인딩:** docker-compose `127.0.0.1:3000:3000` (LAN 노출 금지). 외부 접속은 Tailscale Serve 8443만
@@ -186,11 +182,6 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **PatchMon 컬렉션 의존:** `community.docker`(docker_compose_v2) 필요. heritage.yml도 동일 모듈 사용 중
 - **Pulse:** moni VM 중지(2026-08-23) 및 heritage 이전 후 2026-08-30 미사용으로 완전 폐기/삭제됨 (`cockpit_pulse_enabled` 플래그는 moni cockpit role 보존용)
 - **moni 재기동 시 RAM 재부족:** walle(host) 7.5GB 제약 — heritage(4GB)와 moni(4GB) 동시 구동 불가. 재기동하려면 heritage 축소 필요. 재기동 후 `hosts.ini` moni IP는 DHCP 재임대 확인 필수
-- **Immich subpath 미지원:** path-based 라우팅 불가 → 전용 포트(2283, Tailscale Serve) 노출 필수
-- **Immich External Library:** aria2 다운로드 경로(`/mnt/data2/torrent/downloads/aria`)를 `/mnt/aria:ro`로 마운트. External Library 등록/관리는 Immich Admin UI에서 수행
-- **Immich 스토리지 경로:** `UPLOAD_LOCATION=/mnt/data1/immich`(data1), `DB_DATA_LOCATION=/opt/heritage/postgres`(rootfs). 신규 bind mount 디렉토리는 walle host에서 사전 생성 필요 — unprivileged LXC 권한 제약
-- **Immich .env 호스트명:** `DB_HOSTNAME=immich-postgres`, `REDIS_HOSTNAME=immich-redis` 필수 — 컨테이너명(`immich_postgres` 등)과 서비스명이 달라 미설정 시 연결 실패
-- **Immich ML 비활성 (2026-08-23):** `IMMICH_MACHINE_LEARNING_URL=false` + ML 컨테이너 제거 — 8만장 임베딩이 CPU/swap 과부하 유발해 탐색형 용도로는 과투자 판단. 재활성: env 제거 + compose에 immich-machine-learning 서비스·model_cache 볼륨 복원
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요
