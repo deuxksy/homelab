@@ -91,8 +91,8 @@ services:
       - JELLYFIN_BaseUrl=/jellyfin
     volumes:
       - ./jellyfin/config:/config
+      - ./jellyfin/cache:/cache
       - /mnt/data2/torrent/jellyfin/metadata:/config/metadata
-      - /mnt/data2/torrent/jellyfin/cache:/cache
       - /mnt/data2/torrent/jellyfin/temp:/tmp/jellyfin
       - /mnt/data2/torrent/downloads:/data1
       - /mnt/data1/torrent/complete:/data2
