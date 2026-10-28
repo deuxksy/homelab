@@ -1,6 +1,6 @@
 # Homelab
 
-본 저장소는 Proxmox VE 9.2(walle) 기반 홈랩 인프라를 OpenTofu와 Ansible을 통해 코드로 관리(IaC)하는 프로젝트입니다. Debian 기반 미디어 서비스 LXC(Caddy, Homepage, Jellyfin, Transmission, Aria2, Immich)를 자동 프로비저닝하며, Tailscale을 통해 안전한 외부 TLS 접속 및 내부 네트워크 분리를 제공합니다. 모니터링 VM(moni)은 2026-08-23 중지 상태입니다.
+본 저장소는 Proxmox VE 9.2(walle) 기반 홈랩 인프라를 OpenTofu와 Ansible을 통해 코드로 관리(IaC)하는 프로젝트입니다. Debian 기반 미디어 서비스 LXC(Caddy, Homepage, Jellyfin, Transmission, Aria2)를 자동 프로비저닝하며, Tailscale을 통해 안전한 외부 TLS 접속 및 내부 네트워크 분리를 제공합니다.
 
 ---
 
@@ -8,8 +8,7 @@
 
 ```
 walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
-├── VM 102: moni (Ubuntu 24.04 LTS — 2026-08-23 중지, disk 보존)
-└── LXC 200: heritage (Debian 12, Docker + Caddy + Media Stack + Immich)
+└── LXC 200: heritage (Debian 12, Docker + Caddy + Media Stack)
 ```
 
 ### 주요 서비스 접속 URL (Tailnet 전용)
@@ -19,10 +18,8 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 | **Homepage** | `https://heritage.bun-bull.ts.net/` | 홈랩 통합 대시보드 |
 | **Jellyfin** | `https://heritage.bun-bull.ts.net/jellyfin` | 미디어 스트리밍 |
 | **Transmission** | `https://heritage.bun-bull.ts.net/transmission` | 토렌트 다운로더 |
-| **Immich** | `https://heritage.bun-bull.ts.net:2283` | 사진 관리 (LAN 직접: `http://<LAN-IP>:2284`) |
+| **Aria2 RPC** | `ws://heritage.bun-bull.ts.net:6800/jsonrpc` | 다운로드 매니저 |
 | **Proxmox UI** | `https://walle.bun-bull.ts.net` | PVE 관리 웹 콘솔 (Tailscale Serve 443→8006) |
-
-> moni 서비스(Cockpit :9090 / PatchMon :8443 / Pulse :10000)는 VM 102 중지(2026-08-23)로 폐쇄 — 재기동 시 복원
 
 ---
 
