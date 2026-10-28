@@ -42,25 +42,6 @@ walle (Proxmox VE, Tailscale: walle.bun-bull.ts.net)
 
 ## Full Provisioning Workflow
 
-### Cockpit VM (신규)
-
-> moni VM 102는 2026-08-23 중지(disk 보존). 아래 워크플로는 moni 재배포 시에만 사용.
-
-```bash
-# 0. Ubuntu template 생성 (최초 1회, walle에서)
-ssh crong@walle.bun-bull.ts.net 'sudo bash -s' < scripts/create-ubuntu-template.sh
-
-# 1. OpenTofu — cockpit VM 102 생성 (Ubuntu cloud image clone, started=true)
-cd proxmox/opentofu && source /home/deck/git/247365/.env && tofu apply -auto-approve
-tofu output  # MAC/IP 확인 (agent 기반, null이면 DHCP fallback)
-
-# 2. DHCP IP 확인 → hosts.ini 갱신 (agent IP 미수집 시)
-ssh arv "cat /tmp/dhcp.leases" | grep "<MAC>"
-
-# 3. Ansible — cockpit role 배포
-cd proxmox/ansible && ansible-playbook playbooks/cockpit.yml
-```
-
 ### Heritage LXC
 
 ```bash
@@ -98,21 +79,6 @@ ssh heritage "cd /opt/heritage && docker compose logs -f --tail=50 caddy"
 ssh crong@walle.bun-bull.ts.net "ls -la /mnt/data1/torrent/ /mnt/data2/torrent/"
 ssh crong@walle.bun-bull.ts.net "chown -R 101000:101000 /mnt/data1/torrent/ /mnt/data2/torrent/"
 
-# --- moni VM 102: 현재 stopped (2026-08-23). 아래 명령은 재기동 시 참고용 ---
-
-# Cockpit 서비스 재시작 / 상태 / 로그 (VM 102, ubuntu user + proxyjump)
-ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "sudo systemctl restart cockpit.socket; sudo systemctl status cockpit.socket"
-ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "sudo journalctl -u cockpit -f --tail=50"
-
-# PatchMon 서비스 재시작 / 상태 / 로그 (VM 102)
-ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/patchmon && sudo docker compose restart server"
-ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/patchmon && sudo docker compose ps"
-ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "cd /opt/patchmon && sudo docker compose logs -f --tail=50 server"
-
-# Tailscale Serve 상태 확인 (moni — 중지 상태 / heritage)
-ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117 "tailscale serve status"
-ssh heritage "tailscale serve status"
-
 # Proxmox VM/LXC 상태
 ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 ```
@@ -135,21 +101,11 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 | :--- | :--- |
 | `proxmox/opentofu/` | OpenTofu 프로비저닝 (provider, variables, cockpit.tf, heritage.tf, outputs.tf, backend.tf) |
 | `proxmox/opentofu/backend.tf` | Cloudflare R2 S3-compatible backend (state 저장소, key: `homelab/dev/terraform.tfstate`) |
-| `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북, roles |
-| `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (플레이북과 그룹명 1:1 매핑: proxmox_hosts, heritage_hosts, cockpit_hosts) |
+| `proxmox/ansible/` | Ansible 설정, 인벤토리, 플레이북 |
+| `proxmox/ansible/inventory/hosts.ini` | 인벤토리 (proxmox_hosts, heritage_hosts) |
 | `proxmox/ansible/playbooks/walle.yml` | walle Tailscale Serve (443→8006) + PVE post-install (enterprise repo 비활성화, no-subscription repo, 알림 숨김) |
-| `proxmox/ansible/playbooks/cockpit.yml` | Cockpit + PatchMon + Pulse 배포 (cockpit_hosts, become, role cockpit) |
-| `proxmox/ansible/roles/cockpit/` | Cockpit role — 패키지, socket loopback, UFW, Docker, PatchMon/Pulse Compose, Tailscale Serve 다중 포트 |
-| `proxmox/ansible/roles/cockpit/tasks/auth.yml` | cockpit-admin 계정 생성 + sudoers + SSH 키 제한 |
-| `proxmox/ansible/roles/cockpit/tasks/docker.yml` | Docker CE Engine 설치 (heritage 패턴: GPG key + apt_repository) |
-| `proxmox/ansible/roles/cockpit/tasks/patchmon.yml` | PatchMon Compose 배포 (.env 0600, docker_compose_v2 wait) |
-| `proxmox/ansible/roles/cockpit/tasks/pulse.yml` | Pulse Compose 배포 (docker_compose_v2 wait, assert 1 컨테이너) |
-| `proxmox/ansible/roles/cockpit/tasks/tailscale_join.yml` | Tailscale 패키지 설치 + 인증키 조인 |
-| `proxmox/ansible/roles/cockpit/tasks/tailscale_serve.yml` | Tailscale Serve reset 기반 4상태 동적 패턴 (9090/8443/10000, R1/R2) |
-| `proxmox/ansible/roles/cockpit/templates/docker-compose.yml.j2` | PatchMon Compose 템플릿 (4컨테이너, 127.0.0.1:3000 loopback) |
-| `proxmox/ansible/roles/cockpit/templates/patchmon.env.j2` | PatchMon .env 템플릿 (시크릿 변수 주입) |
-| `proxmox/ansible/roles/cockpit/templates/pulse-docker-compose.yml.j2` | Pulse Compose 템플릿 (1컨테이너, 127.0.0.1:7655 loopback) |
-| `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (cockpit_admin_password, tailscale_auth_key, patchmon_* 5키) |
+| `proxmox/ansible/playbooks/heritage.yml` | Heritage 미디어 서버 스택 배포 (Tailscale, Docker, 서비스 기동) |
+| `proxmox/ansible/secrets.sops.yaml` | Ansible 전용 sops (tailscale_auth_key 등) |
 | `heritage/` | Heritage 서비스 Docker Compose (5컨테이너: caddy, homepage, transmission, aria2, jellyfin — Immich/Pulse 제거) |
 | `heritage/.env.sops` | sops 암호화 환경변수 (서버 .env의 소스: `HOMEPAGE_VAR_KEY_*`, `HOMEPAGE_VAR_PROXMOX_TOKEN_*` 등) |
 | `heritage/caddy/` | Caddy L7 리버스 프록시 설정 (Caddyfile) |
@@ -168,20 +124,9 @@ ssh crong@walle.bun-bull.ts.net "sudo qm list; sudo pct list"
 - **Heritage LXC UID 매핑:** LXC 200은 unprivileged → 컨테이너 UID N → 호스트 UID 100000+N 매핑. 현재 crong 사용자 UID 101000은 컨테이너 내 UID 1000으로 매핑됨
 - **Transmission/Jellyfin 권한:** 호스트 `/mnt/data{1,2}/torrent/`는 UID 101000:101000 소유(권한 700). Transmission(PUID=1000)과 Jellyfin(user:1000:1000)이 동일 UID 사용
 - **Proxmox HTTP 검증:** `curl -sI`(HEAD)는 501 반환. GET으로 검증: `curl -s -o /dev/null -w "%{http_code}" https://walle.bun-bull.ts.net`
-- **Cockpit socket loopback:** `cockpit.socket`을 `/etc/systemd/system/cockpit.socket.d/override.conf`로 `127.0.0.1:9090` 제한. 외부 노출은 Tailscale Serve(9090)만
-- **Cockpit Tailscale Serve 스킴:** 백엔드는 `https+insecure://localhost:9090` (Cockpit 자가서명 TLS). 일반 `https://`는 502
-- **Cockpit admin 계정:** Ansible이 동적 생성 (`cockpit-admin`, passworded sudo — NOPASSWD 지양). 비밀번호는 `proxmox/ansible/secrets.sops.yaml`
-- **Cockpit VM SSH:** `ubuntu` 계정 + walle proxyjump (`ssh -J crong@walle.bun-bull.ts.net ubuntu@192.168.221.117`). `crong@moni` 불가 (SSH 키 미등록)
-- **Tailscale Serve 포트:** 80 미사용. 443은 walle(→8006 PVE UI)과 heritage(→9080 Caddy)가 사용. moni(재기동 시) Cockpit=9090, PatchMon=8443
-- **Tailscale Serve 4상태 동적 패턴:** reset 기반 재구성 (9090 항상 + 8443/10000 조건부). `serve_required_ports` vs `ts_current_serve.TCP.keys()` 비교로 idempotency 보장
-- **PatchMon 배포 제어:** `cockpit_patchmon_enabled`(기본 true)로 Docker/PatchMon 전체 on/off. 회사 서버는 false 시 Cockpit만 배포 (재현성)
-- **PatchMon loopback 바인딩:** docker-compose `127.0.0.1:3000:3000` (LAN 노출 금지). 외부 접속은 Tailscale Serve 8443만
-- **PatchMon CORS_ORIGIN:** `cockpit_patchmon_cors_origin` 변수 (`https://moni.bun-bull.ts.net:8443`). 노드명/포트 변경 시 동기화 필수
-- **PatchMon Tailscale Serve JSON idempotency:** `tailscale serve status --json`의 `TCP` 키로 재구성 여부 판단 (2026-07-06 스키마 확인)
-- **PatchMon .env 권한:** `/opt/patchmon/.env`는 mode 0600 owner root (평문 시크릿). Ansible `no_log: true`로 배포 로깅 차단
-- **PatchMon 컬렉션 의존:** `community.docker`(docker_compose_v2) 필요. heritage.yml도 동일 모듈 사용 중
-- **Pulse:** moni VM 중지(2026-08-23) 및 heritage 이전 후 2026-08-30 미사용으로 완전 폐기/삭제됨 (`cockpit_pulse_enabled` 플래그는 moni cockpit role 보존용)
-- **moni 재기동 시 RAM 재부족:** walle(host) 7.5GB 제약 — heritage(4GB)와 moni(4GB) 동시 구동 불가. 재기동하려면 heritage 축소 필요. 재기동 후 `hosts.ini` moni IP는 DHCP 재임대 확인 필수
+- **Tailscale Serve 포트:** 80 미사용. 443은 walle(→8006 PVE UI)과 heritage(→9080 Caddy)가 사용.
+- **Tailscale Serve 4상태 동적 패턴:** reset 기반 재구성.
+- **moni 재기동 시 RAM 재부족:** walle(host) 7.5GB 제약 — heritage(4GB)와 moni(4GB) 동시 구동 불가. 재기동하려면 heritage 축소 필요.
 - **.terraform.lock.hcl:** `.gitignore`에 있지만 재현 가능한 빌드를 위해 커밋 권장. 필요시 gitignore에서 제거
 - **DHCP IP:** `hosts.ini` IP는 공유기 DHCP 기반. VM 재생성 시 `ssh arv "cat /tmp/dhcp.leases"`로 MAC→IP 매핑 후 갱신
 - **Heritage bind mount:** `/mnt/data1`, `/mnt/data2`는 walle에 디스크 설정 후 `heritage.tf`에 `mount_point` 블록 추가 필요

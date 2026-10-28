@@ -40,8 +40,8 @@ tofu apply
 ```bash
 cd proxmox/ansible
 
-# Cockpit 및 모니터링 스택 배포
-ansible-playbook playbooks/cockpit.yml
+# walle 호스트 설정 (Tailscale Serve 443→8006, PVE no-subscription, 유틸리티)
+ansible-playbook playbooks/walle.yml
 
 # Heritage 미디어 서버 스택 배포
 ansible-playbook playbooks/heritage.yml
